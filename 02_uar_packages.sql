@@ -1,0 +1,260 @@
+-- ============================================================================
+-- UAR rebuild -- packages, phase 1
+-- Run after 01_uar_schema_ddl.sql, as XXAPEX_EBS.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Security (carried over from the phase-1 patch, unchanged in shape).
+-- 'Y'/'N' returns rather than boolean so every function here is callable
+-- from both SQL (LOV queries, view predicates) and PL/SQL (page conditions,
+-- process bodies) without a second wrapper -- see project memory on DECODE
+-- being SQL-only for why mixing SQL-only and PL/SQL-only assumptions in the
+-- same codebase is worth avoiding on principle.
+-- ----------------------------------------------------------------------------
+create or replace package xxcti_uar_security_pkg as
+
+    function is_admin(
+        p_app_user in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2;
+
+    -- Resolves the calling APEX user to their own employee_id via email
+    -- match against xxcti_uar_workday_employee_mgr. Returns null if no match
+    -- (e.g. the logged-in APEX account isn't also a Workday employee row).
+    function resolve_employee_id(
+        p_app_user in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2;
+
+    -- 'Y' if p_app_user may review p_employee_id: either an admin, or
+    -- p_employee_id's manager_id resolves back to p_app_user's own
+    -- employee_id.
+    function can_review(
+        p_employee_id in varchar2,
+        p_app_user    in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2;
+
+end xxcti_uar_security_pkg;
+/
+show errors
+
+create or replace package body xxcti_uar_security_pkg as
+
+    function is_admin(
+        p_app_user in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2 is
+        l_count number;
+    begin
+        select count(*)
+          into l_count
+          from xxcti_uar_admins
+         where upper(email_address) = upper(p_app_user);
+
+        return case when l_count > 0 then 'Y' else 'N' end;
+    end is_admin;
+
+    function resolve_employee_id(
+        p_app_user in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2 is
+        l_employee_id varchar2(240);
+    begin
+        select to_char(employee_id)
+          into l_employee_id
+          from xxcti_uar_workday_employee_mgr
+         where upper(email_address) = upper(p_app_user)
+           and rownum = 1;
+
+        return l_employee_id;
+    exception
+        when no_data_found then
+            return null;
+    end resolve_employee_id;
+
+    function can_review(
+        p_employee_id in varchar2,
+        p_app_user    in varchar2 default sys_context('APEX$SESSION','APP_USER')
+    ) return varchar2 is
+        l_manager_id varchar2(240);
+    begin
+        if is_admin(p_app_user) = 'Y' then
+            return 'Y';
+        end if;
+
+        select to_char(manager_id)
+          into l_manager_id
+          from xxcti_uar_workday_employee_mgr
+         where to_char(employee_id) = p_employee_id;
+
+        return case
+                 when l_manager_id = resolve_employee_id(p_app_user) then 'Y'
+                 else 'N'
+               end;
+    exception
+        when no_data_found then
+            return 'N';
+    end can_review;
+
+end xxcti_uar_security_pkg;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
+-- Cycle management -- new for the rebuild.
+-- ----------------------------------------------------------------------------
+create or replace package xxcti_uar_cycle_pkg as
+
+    -- Returns the currently OPEN cycle_id, or null if none is open.
+    function current_open_cycle return number;
+
+    -- Opens a new cycle and snapshots every row currently in
+    -- xxcti_uar_employee_responsibilities into xxcti_uar_review_items for
+    -- it. Raises an application error if a cycle is already open (close it
+    -- first) -- deliberately only one open cycle at a time, to keep "which
+    -- cycle am I reviewing" unambiguous on Page 1.
+    procedure open_cycle(
+        p_cycle_name   in varchar2,
+        p_period_start in date,
+        p_period_end   in date,
+        p_due_date     in date,
+        p_cycle_id     out number
+    );
+
+    -- Closes a cycle. Items left with a null approval stay null -- closing
+    -- does not force-approve or force-deny anything; it just locks the
+    -- cycle's items against further edits (enforced by can_edit_cycle,
+    -- called from the Page 2 BEFORE_HEADER gate in APEX_BUILD_GUIDE.md).
+    procedure close_cycle(p_cycle_id in number);
+
+    -- 'Y'/'N' -- whether p_cycle_id currently accepts edits.
+    function can_edit_cycle(p_cycle_id in number) return varchar2;
+
+end xxcti_uar_cycle_pkg;
+/
+show errors
+
+create or replace package body xxcti_uar_cycle_pkg as
+
+    function current_open_cycle return number is
+        l_cycle_id number;
+    begin
+        select cycle_id
+          into l_cycle_id
+          from xxcti_uar_review_cycles
+         where status = 'OPEN'
+           and rownum = 1;
+
+        return l_cycle_id;
+    exception
+        when no_data_found then
+            return null;
+    end current_open_cycle;
+
+    procedure open_cycle(
+        p_cycle_name   in varchar2,
+        p_period_start in date,
+        p_period_end   in date,
+        p_due_date     in date,
+        p_cycle_id     out number
+    ) is
+        l_existing number;
+    begin
+        l_existing := current_open_cycle;
+        if l_existing is not null then
+            raise_application_error(
+                -20001,
+                'Cycle ' || l_existing || ' is already open -- close it before opening a new one.'
+            );
+        end if;
+
+        select xxcti_uar_cycle_id_seq.nextval into p_cycle_id from dual;
+
+        insert into xxcti_uar_review_cycles (
+            cycle_id, cycle_name, period_start, period_end, due_date, status
+        ) values (
+            p_cycle_id, p_cycle_name, p_period_start, p_period_end, p_due_date, 'OPEN'
+        );
+
+        insert into xxcti_uar_review_items (
+            review_item_id, cycle_id, employee_number, user_name,
+            responsibility, application, start_date, end_date, last_logon
+        )
+        select xxcti_uar_review_item_id_seq.nextval,
+               p_cycle_id,
+               employee_number,
+               user_name,
+               responsibility,
+               application,
+               start_date,
+               end_date,
+               last_logon
+          from xxcti_uar_employee_responsibilities;
+
+        commit;
+    end open_cycle;
+
+    procedure close_cycle(p_cycle_id in number) is
+    begin
+        update xxcti_uar_review_cycles
+           set status      = 'CLOSED',
+               closed_by   = sys_context('APEX$SESSION','APP_USER'),
+               closed_date = sysdate
+         where cycle_id = p_cycle_id;
+
+        commit;
+    end close_cycle;
+
+    function can_edit_cycle(p_cycle_id in number) return varchar2 is
+        l_status varchar2(10);
+    begin
+        select status
+          into l_status
+          from xxcti_uar_review_cycles
+         where cycle_id = p_cycle_id;
+
+        return case when l_status = 'OPEN' then 'Y' else 'N' end;
+    exception
+        when no_data_found then
+            return 'N';
+    end can_edit_cycle;
+
+end xxcti_uar_cycle_pkg;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
+-- Audit-trail stamping. APPROVER/APPROVAL_DATE were never populated by
+-- anything in the original MVP -- this closes that gap at the table level so
+-- it holds regardless of how the update arrives (Page 2's IG, a future API,
+-- a script).
+-- ----------------------------------------------------------------------------
+create or replace trigger xxcti_uar_review_items_biu
+    before update on xxcti_uar_review_items
+    for each row
+    when (nvl(new.approval, 'x') != nvl(old.approval, 'x'))
+begin
+    :new.approver      := coalesce(sys_context('APEX$SESSION','APP_USER'), user);
+    :new.approval_date := sysdate;
+end;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
+-- Standalone smoke tests -- run after seeding xxcti_uar_admins in
+-- 01_uar_schema_ddl.sql, before touching APEX at all.
+-- ----------------------------------------------------------------------------
+-- select xxcti_uar_security_pkg.is_admin('your.email@company.com') from dual;
+-- select xxcti_uar_security_pkg.resolve_employee_id('some.manager@company.com') from dual;
+-- select xxcti_uar_security_pkg.can_review('12345', 'some.manager@company.com') from dual;
+-- select xxcti_uar_cycle_pkg.current_open_cycle from dual;
+--
+-- declare
+--     l_cycle_id number;
+-- begin
+--     xxcti_uar_cycle_pkg.open_cycle(
+--         p_cycle_name   => 'Q4 2026 Test Cycle',
+--         p_period_start => date '2026-10-01',
+--         p_period_end   => date '2026-12-31',
+--         p_due_date     => date '2026-10-15',
+--         p_cycle_id     => l_cycle_id
+--     );
+--     dbms_output.put_line('Opened cycle ' || l_cycle_id);
+-- end;
+-- /
