@@ -18,6 +18,12 @@ whenever sqlerror exit sql.sqlcode rollback
 --     p_logo_type=>'IT', not the 'TEXT' this file originally guessed --
 --     fixed 2026-09-29 after a bare import 400). Pure appearance either way,
 --     add back later via the real App Builder UI once the app exists.
+--   - p_checksum_salt was hand-typed as a 65-character hex string instead of
+--     the original's 64 -- never mechanically counted at the time. Fixed
+--     2026-09-29 with a properly generated, length-verified 64-char value
+--     after re-reviewing the whole file line by line against a real,
+--     repeated import failure (not a length-sensitive value that's safe to
+--     eyeball, in hindsight).
 --   - No "remember username" cookie on Login -- convenience feature, not
 --     required for login to work.
 --   - Page 1's employee list is a Classic Report, not an Interactive Grid --
@@ -62,7 +68,7 @@ wwv_imp_workspace.create_flow(
 ,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'UAR-REBUILD')
 ,p_page_view_logging=>'YES'
 ,p_page_protection_enabled_y_n=>'Y'
-,p_checksum_salt=>'4B2E7A19C6D8F031B5E9A47C0D2F6E81B3A9C5D7E1F4028B6C9A3D5E7F102B4C9'
+,p_checksum_salt=>'7351B4D0A711040E6177B30EF96F9FF1638173D0702C1D257D3C8F7A5E4CE05E'
 ,p_bookmark_checksum_function=>'SH512'
 ,p_compatibility_mode=>'24.2'
 ,p_flow_language=>'en'
