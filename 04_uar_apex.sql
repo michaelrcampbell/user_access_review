@@ -13,7 +13,10 @@ whenever sqlerror exit sql.sqlcode rollback
 -- later stages once this imports and tests clean.
 --
 -- Deliberately simplified vs. the original app 104 for this first cut:
---   - No custom logo/app icons (TEXT logo only, PWA off) -- pure appearance,
+--   - No custom logo/app icons/PWA -- omitted p_logo_type/p_logo_text
+--     entirely rather than guess at a valid token (original only ever shows
+--     p_logo_type=>'IT', not the 'TEXT' this file originally guessed --
+--     fixed 2026-09-29 after a bare import 400). Pure appearance either way,
 --     add back later via the real App Builder UI once the app exists.
 --   - No "remember username" cookie on Login -- convenience feature, not
 --     required for login to work.
@@ -70,8 +73,6 @@ wwv_imp_workspace.create_flow(
 ,p_timestamp_tz_format=>'DS'
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
 ,p_authentication_id=>wwv_flow_imp.id(9700000000000010)
-,p_logo_type=>'TEXT'
-,p_logo_text=>'User Access Review (Rebuild)'
 ,p_proxy_server=>nvl(wwv_flow_application_install.get_proxy,'')
 ,p_no_proxy_domains=>nvl(wwv_flow_application_install.get_no_proxy_domains,'')
 ,p_flow_version=>'Rebuild 0.1 (Stage 0)'
@@ -120,6 +121,7 @@ wwv_flow_imp_shared.create_list(
  p_id=>wwv_flow_imp.id(9700000000000020)
 ,p_name=>'Navigation Menu'
 ,p_list_status=>'PUBLIC'
+,p_version_scn=>9000000000001
 );
 wwv_flow_imp_shared.create_list_item(
  p_id=>wwv_flow_imp.id(9700000000000021)
@@ -137,6 +139,7 @@ wwv_flow_imp_shared.create_list(
  p_id=>wwv_flow_imp.id(9700000000000030)
 ,p_name=>'Navigation Bar'
 ,p_list_status=>'PUBLIC'
+,p_version_scn=>9000000000002
 );
 wwv_flow_imp_shared.create_list_item(
  p_id=>wwv_flow_imp.id(9700000000000031)
@@ -176,6 +179,7 @@ wwv_flow_imp_shared.create_security_scheme(
 ,p_scheme_type=>'NATIVE_FUNCTION_BODY'
 ,p_attribute_01=>'return xxcti_uar_security_pkg.is_admin = ''Y'';'
 ,p_error_message=>'Insufficient privileges, user is not an Administrator'
+,p_version_scn=>9000000000003
 ,p_caching=>'BY_USER_BY_PAGE_VIEW'
 );
 end;
@@ -188,6 +192,7 @@ wwv_flow_imp_shared.create_security_scheme(
 ,p_scheme_type=>'NATIVE_FUNCTION_BODY'
 ,p_attribute_01=>'return xxcti_uar_security_pkg.is_admin = ''Y'';'
 ,p_error_message=>'Insufficient privileges, user is not an Administrator'
+,p_version_scn=>9000000000004
 ,p_caching=>'BY_USER_BY_PAGE_VIEW'
 );
 end;
@@ -198,6 +203,7 @@ wwv_flow_imp_shared.create_acl_role(
  p_id=>wwv_flow_imp.id(9700000000000052)
 ,p_static_id=>'ADMINISTRATOR'
 ,p_name=>'Administrator'
+,p_version_scn=>9000000000005
 );
 end;
 /
@@ -250,6 +256,7 @@ wwv_flow_imp_shared.create_theme(
 '#APEX_FILES#libraries/apex/#MIN_DIRECTORY#widget.stickyWidget#MIN#.js?v=#APEX_VERSION#',
 '#THEME_FILES#js/theme42#MIN#.js?v=#APEX_VERSION#'))
 ,p_css_file_urls=>'#THEME_FILES#css/Core#MIN#.css?v=#APEX_VERSION#'
+,p_version_scn=>9000000000006
 );
 end;
 /
@@ -262,6 +269,7 @@ wwv_flow_imp_shared.create_authentication(
 ,p_invalid_session_type=>'LOGIN'
 ,p_use_secure_cookie_yn=>'N'
 ,p_ras_mode=>0
+,p_version_scn=>9000000000007
 );
 end;
 /
@@ -385,6 +393,33 @@ wwv_flow_imp_page.create_report_region(
 ,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
 ,p_query_row_count_max=>500
 ,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_prn_units=>'INCHES'
+,p_prn_paper_size=>'LETTER'
+,p_prn_width=>11
+,p_prn_height=>8.5
+,p_prn_orientation=>'HORIZONTAL'
+,p_prn_page_header_font_color=>'#000000'
+,p_prn_page_header_font_family=>'Helvetica'
+,p_prn_page_header_font_weight=>'normal'
+,p_prn_page_header_font_size=>'12'
+,p_prn_page_footer_font_color=>'#000000'
+,p_prn_page_footer_font_family=>'Helvetica'
+,p_prn_page_footer_font_weight=>'normal'
+,p_prn_page_footer_font_size=>'12'
+,p_prn_header_bg_color=>'#EEEEEE'
+,p_prn_header_font_color=>'#000000'
+,p_prn_header_font_family=>'Helvetica'
+,p_prn_header_font_weight=>'bold'
+,p_prn_header_font_size=>'10'
+,p_prn_body_bg_color=>'#FFFFFF'
+,p_prn_body_font_color=>'#000000'
+,p_prn_body_font_family=>'Helvetica'
+,p_prn_body_font_weight=>'normal'
+,p_prn_body_font_size=>'10'
+,p_prn_border_width=>.5
+,p_prn_page_header_alignment=>'CENTER'
+,p_prn_page_footer_alignment=>'CENTER'
+,p_prn_border_color=>'#666666'
 ,p_sort_null=>'L'
 ,p_plug_query_strip_html=>'N'
 );
