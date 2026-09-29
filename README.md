@@ -1,8 +1,16 @@
 # UAR (User Access Review) App — Rebuild
 
 Oracle APEX app rebuilding the "Oracle User Access Review" MVP (originally app 104,
-schema `XXAPEX_EBS`) around a proper review-cycle model instead of a single mutable
-snapshot, plus the authorization fixes identified in the original app's security review.
+workspace `ct_bsg_apex`, schema `XXUAR`) around a proper review-cycle model instead of a
+single mutable snapshot, plus the authorization fixes identified in the original app's
+security review.
+
+**Correction (2026-09-29):** earlier drafts of this repo assumed workspace/schema
+`XXAPEX_EBS` — copied from the original app 104 export's declared owner without ever
+confirming it — instead of asking. That mismatch (real values: workspace `ct_bsg_apex`,
+schema `XXUAR`) is the confirmed likely cause of every `04_uar_apex.sql` import failure
+during Stage 0 testing. Fixed in `04_uar_apex.sql`, `01_uar_schema_ddl.sql`, and
+`02_uar_packages.sql`.
 
 ## Why a rebuild, not a patch
 

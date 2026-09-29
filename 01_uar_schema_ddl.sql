@@ -1,6 +1,9 @@
 -- ============================================================================
 -- UAR (User Access Review) -- rebuild schema, phase 1
--- Run as XXAPEX_EBS (or a user with DDL rights on that schema).
+-- Run as XXUAR (or a user with DDL rights on that schema). Corrected
+-- 2026-09-29 -- this previously said XXAPEX_EBS, assumed from the original
+-- app 104 export rather than confirmed; the real schema is XXUAR in the
+-- ct_bsg_apex workspace.
 --
 -- PREREQUISITES (assumed to already exist, fed by an external EBS/Workday
 -- extract process -- NOT created by this script):

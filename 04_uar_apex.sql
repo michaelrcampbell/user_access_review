@@ -39,15 +39,22 @@ whenever sqlerror exit sql.sqlcode rollback
 --   - Employee ID is not yet a link to Page 2 -- Page 2 doesn't exist until
 --     Stage 1. Wired up then.
 --
+-- CORRECTED 2026-09-29: p_default_workspace_id and p_default_owner/p_owner
+-- were wrong -- assumed (copied from the original app 104 export) rather
+-- than confirmed. Real values: workspace ct_bsg_apex (id 9805500296728652,
+-- confirmed via a live export taken from it), schema XXUAR, not
+-- XXAPEX_EBS/1376906471187634. This was the likely cause of every prior
+-- import failure on this file.
+--
 --------------------------------------------------------------------------------
 begin
 wwv_flow_imp.import_begin (
  p_version_yyyy_mm_dd=>'2024.11.30'
 ,p_release=>'24.2.0'
-,p_default_workspace_id=>1376906471187634
+,p_default_workspace_id=>9805500296728652
 ,p_default_application_id=>105
 ,p_default_id_offset=>3087771470140045
-,p_default_owner=>'XXAPEX_EBS'
+,p_default_owner=>'XXUAR'
 );
 end;
 /
@@ -63,7 +70,7 @@ prompt --application/create_application
 begin
 wwv_imp_workspace.create_flow(
  p_id=>wwv_flow.g_flow_id
-,p_owner=>nvl(wwv_flow_application_install.get_schema,'XXAPEX_EBS')
+,p_owner=>nvl(wwv_flow_application_install.get_schema,'XXUAR')
 ,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle User Access Review (Rebuild)')
 ,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'UAR-REBUILD')
 ,p_page_view_logging=>'YES'
