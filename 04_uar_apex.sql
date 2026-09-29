@@ -43,8 +43,22 @@ whenever sqlerror exit sql.sqlcode rollback
 -- were wrong -- assumed (copied from the original app 104 export) rather
 -- than confirmed. Real values: workspace ct_bsg_apex (id 9805500296728652,
 -- confirmed via a live export taken from it), schema XXUAR, not
--- XXAPEX_EBS/1376906471187634. This was the likely cause of every prior
--- import failure on this file.
+-- XXAPEX_EBS/1376906471187634. Turned out NOT to be the actual cause of the
+-- import failures (see next note) -- fixed anyway since it was still wrong.
+--
+-- ACTUAL ROOT CAUSE, FOUND 2026-09-29 via SQL Workshop -> SQL Scripts (which
+-- surfaces real PL/SQL errors, unlike App Builder -> Import's opaque
+-- CORS-flavored 400/403 wrapper): create_theme had an extra
+-- ,p_version_scn=>... parameter that procedure does not accept -- added by
+-- mistake during an earlier "restore dropped p_version_scn params" pass that
+-- over-applied to a call it doesn't belong on (create_list,
+-- create_security_scheme, create_acl_role, and create_authentication DO take
+-- it; create_theme does not, confirmed against both the original app 104
+-- export and a fresh f113.sql export from this same workspace). Caused
+-- PLS-00306 "wrong number or types of arguments in call to 'CREATE_THEME'".
+-- Removed. If App Builder Import ever throws an opaque error like this
+-- again with no useful detail, try SQL Scripts first -- it gave the exact
+-- line and error immediately.
 --
 --------------------------------------------------------------------------------
 begin
@@ -269,7 +283,6 @@ wwv_flow_imp_shared.create_theme(
 '#APEX_FILES#libraries/apex/#MIN_DIRECTORY#widget.stickyWidget#MIN#.js?v=#APEX_VERSION#',
 '#THEME_FILES#js/theme42#MIN#.js?v=#APEX_VERSION#'))
 ,p_css_file_urls=>'#THEME_FILES#css/Core#MIN#.css?v=#APEX_VERSION#'
-,p_version_scn=>9000000000006
 );
 end;
 /
