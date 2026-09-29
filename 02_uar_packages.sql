@@ -172,9 +172,15 @@ create or replace package body xxcti_uar_cycle_pkg as
             p_cycle_id, p_cycle_name, p_period_start, p_period_end, p_due_date, 'OPEN'
         );
 
+        -- xxcti_uar_employee_responsibilities has no last_logon column (confirmed
+        -- against user_tab_columns 2026-09-28) -- the original app only ever
+        -- read last_logon from the old audit table, populated by some external
+        -- process not visible anywhere in the APEX export. Left null here until
+        -- a real source is identified; xxcti_uar_review_items still has the
+        -- column so nothing else needs to change if one turns up later.
         insert into xxcti_uar_review_items (
             review_item_id, cycle_id, employee_number, user_name,
-            responsibility, application, start_date, end_date, last_logon
+            responsibility, application, start_date, end_date
         )
         select xxcti_uar_review_item_id_seq.nextval,
                p_cycle_id,
@@ -183,8 +189,7 @@ create or replace package body xxcti_uar_cycle_pkg as
                responsibility,
                application,
                start_date,
-               end_date,
-               last_logon
+               end_date
           from xxcti_uar_employee_responsibilities;
 
         commit;

@@ -20,9 +20,34 @@ by everything here.
 | Piece | Status |
 |---|---|
 | Schema (`01_uar_schema_ddl.sql`) | Done — run and test directly |
-| Packages (`02_uar_packages.sql`) | Done — run and test directly |
+| Packages (`02_uar_packages.sql`) | Done, tested — `open_cycle`'s snapshot fixed 2026-09-28 to drop `last_logon` (not present on `xxcti_uar_employee_responsibilities`) |
 | Legacy data migration (`03_uar_migration_legacy_audit.sql`) | Done, optional |
-| APEX application | **Not built yet** — see `APEX_BUILD_GUIDE.md` |
+| APEX application (`04_uar_apex.sql`) | **Stage 0 hand-authored, untested** — shell + Login + Page 1 (My Team Review). Pages 2–4 follow in later stages once this imports clean. |
+
+`04_uar_apex.sql` is hand-authored, not exported from Page Designer (there's no live instance
+to build it in and export from yet) — built and reviewed stage by stage instead of all at
+once, specifically so a failed import points at a small, known set of new components rather
+than an entire app. See the file's own header comment for what's deliberately simplified in
+Stage 0 (no logo/icons, no remember-me cookie, Classic Report instead of Interactive Grid on
+Page 1, no progress-bar region yet). New app ID `105` — change
+`p_default_application_id`/`p_id` references if that's taken in the target workspace, and
+double check `p_default_workspace_id` (`1376906471187634`, copied from the original app 104
+export on the assumption it's the same workspace).
+
+### Testing Stage 0
+
+1. Confirm `01_uar_schema_ddl.sql`/`02_uar_packages.sql` are already installed and at least
+   one row exists in `xxcti_uar_admins` for your own email.
+2. Run `04_uar_apex.sql` against the target workspace (SQL Workshop → SQL Scripts, or App
+   Builder → Import).
+3. If it fails: capture the exact error text (component name / page prompt line it failed
+   under, if any) — that's usually enough to identify which specific call needs fixing
+   without guessing.
+4. If it imports: open the app, log in with an APEX account, and confirm Page 1 shows either
+   your own name pre-selected (or the full manager list if you're in `xxcti_uar_admins`) and
+   the "no access items" message (there's no open cycle yet, so this is expected — nothing
+   to review until a cycle is opened via `xxcti_uar_cycle_pkg.open_cycle` from
+   `02_uar_packages.sql`'s smoke tests).
 
 No mailer is configured yet, so `APEX_MAIL` notifications/reminders are explicitly **not**
 part of this rebuild — Page 3's manager-completion report keeps the MVP's CSV-export
@@ -62,11 +87,16 @@ Then seed at least one admin (`insert into xxcti_uar_admins ...`, see the schema
 and run the smoke tests commented at the bottom of `02_uar_packages.sql` before touching
 APEX at all.
 
-Once the schema/packages are confirmed working, build the application per
-`APEX_BUILD_GUIDE.md` in Page Designer, then export it as `04_uar_apex.sql` for this repo
-— at that point, future changes can go back to precise SQL patches the way the original
-app-104 security patch did, since there'll be a real file to check parameter precedent
-against.
+`APEX_BUILD_GUIDE.md` is the original page-by-page spec written for building this in Page
+Designer by hand; `04_uar_apex.sql` is now the actively-developed hand-authored path
+instead, growing stage by stage as each prior stage is confirmed importing and working.
+
+## Confirmed schema facts (from live `user_tab_columns` checks, not the APEX export)
+
+- `xxcti_uar_employee_responsibilities` columns: `user_name`, `employee_number`,
+  `responsibility`, `application`, `start_date`, `end_date` — **no `last_logon`**. The
+  original app only ever read `last_logon` from the old audit table, which some
+  external/unseen process populated independently — its real source is still unknown.
 
 ## Known gotchas to keep in mind once the APEX layer exists here
 
