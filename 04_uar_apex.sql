@@ -146,6 +146,15 @@ wwv_flow_imp_shared.create_list_item(
 ,p_list_item_icon=>'fa-check-square-o'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
+wwv_flow_imp_shared.create_list_item(
+ p_id=>wwv_flow_imp.id(9700000000000022)
+,p_list_item_display_sequence=>20
+,p_list_item_link_text=>'Review Cycles'
+,p_list_item_link_target=>'f?p=&APP_ID.:3:&SESSION.::&DEBUG.::::'
+,p_list_item_icon=>'fa-calendar'
+,p_security_scheme=>'Administration Rights'
+,p_list_item_current_type=>'TARGET_PAGE'
+);
 end;
 /
 prompt --application/shared_components/navigation/lists/navigation_bar
@@ -1257,6 +1266,348 @@ wwv_flow_imp_page.create_page_process(
 ,p_attribute_08=>'Y'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_internal_uid=>1700000000000370
+);
+end;
+/
+prompt --application/pages/page_00003
+begin
+wwv_flow_imp_page.create_page(
+ p_id=>3
+,p_name=>'Review Cycles'
+,p_alias=>'REVIEW-CYCLES'
+,p_step_title=>'Review Cycles'
+,p_autocomplete_on_off=>'OFF'
+,p_page_template_options=>'#DEFAULT#'
+,p_required_role=>wwv_flow_imp.id(9700000000000051)
+,p_protection_level=>'C'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000400)
+,p_plug_name=>'P3_OPEN_NEW_CYCLE'
+,p_title=>'Open New Cycle'
+,p_icon_css_classes=>'fa-lg fa-calendar-plus-o'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>10
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000401)
+,p_name=>'P3_NEW_CYCLE_NAME'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_prompt=>'Cycle Name'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>30
+,p_cMaxlength=>120
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000402)
+,p_name=>'P3_NEW_PERIOD_START'
+,p_item_sequence=>20
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_prompt=>'Period Start (YYYY-MM-DD)'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>15
+,p_cMaxlength=>10
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000403)
+,p_name=>'P3_NEW_PERIOD_END'
+,p_item_sequence=>30
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_prompt=>'Period End (YYYY-MM-DD)'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>15
+,p_cMaxlength=>10
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000404)
+,p_name=>'P3_NEW_DUE_DATE'
+,p_item_sequence=>40
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_prompt=>'Due Date (YYYY-MM-DD)'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>15
+,p_cMaxlength=>10
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000405)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_button_name=>'OPEN_CYCLE'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Open Cycle'
+,p_button_position=>'NEXT'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000410)
+,p_process_sequence=>10
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Open New Cycle'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_cycle_id number;',
+'begin',
+'   xxcti_uar_cycle_pkg.open_cycle(',
+'      p_cycle_name   => :P3_NEW_CYCLE_NAME,',
+'      p_period_start => to_date(:P3_NEW_PERIOD_START, ''YYYY-MM-DD''),',
+'      p_period_end   => to_date(:P3_NEW_PERIOD_END, ''YYYY-MM-DD''),',
+'      p_due_date     => to_date(:P3_NEW_DUE_DATE, ''YYYY-MM-DD''),',
+'      p_cycle_id     => l_cycle_id',
+'   );',
+'end;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000410
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000000420)
+,p_name=>'P3_CYCLES'
+,p_title=>'Cycles'
+,p_template=>4072358936313175081
+,p_display_sequence=>30
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select c.cycle_id,',
+'       c.cycle_name,',
+'       c.period_start,',
+'       c.period_end,',
+'       c.due_date,',
+'       c.status,',
+'       c.created_date,',
+'       c.closed_date,',
+'       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id) as total_items,',
+'       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id and ri.approval is not null) as completed_items',
+'from xxcti_uar_review_cycles c',
+'order by c.period_start desc'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>50
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No review cycles have been created yet.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_csv_output=>'Y'
+,p_csv_output_link_text=>'Download'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000421)
+,p_query_column_id=>1
+,p_column_alias=>'CYCLE_ID'
+,p_column_display_sequence=>1
+,p_column_heading=>'Cycle Id'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000422)
+,p_query_column_id=>2
+,p_column_alias=>'CYCLE_NAME'
+,p_column_display_sequence=>2
+,p_column_heading=>'Cycle Name'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000423)
+,p_query_column_id=>3
+,p_column_alias=>'PERIOD_START'
+,p_column_display_sequence=>3
+,p_column_heading=>'Period Start'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000424)
+,p_query_column_id=>4
+,p_column_alias=>'PERIOD_END'
+,p_column_display_sequence=>4
+,p_column_heading=>'Period End'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000425)
+,p_query_column_id=>5
+,p_column_alias=>'DUE_DATE'
+,p_column_display_sequence=>5
+,p_column_heading=>'Due Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000426)
+,p_query_column_id=>6
+,p_column_alias=>'STATUS'
+,p_column_display_sequence=>6
+,p_column_heading=>'Status'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000427)
+,p_query_column_id=>7
+,p_column_alias=>'CREATED_DATE'
+,p_column_display_sequence=>7
+,p_column_heading=>'Created Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000428)
+,p_query_column_id=>8
+,p_column_alias=>'CLOSED_DATE'
+,p_column_display_sequence=>8
+,p_column_heading=>'Closed Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000429)
+,p_query_column_id=>9
+,p_column_alias=>'TOTAL_ITEMS'
+,p_column_display_sequence=>9
+,p_column_heading=>'Total Items'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000430)
+,p_query_column_id=>10
+,p_column_alias=>'COMPLETED_ITEMS'
+,p_column_display_sequence=>10
+,p_column_heading=>'Completed Items'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000000440)
+,p_name=>'P3_MANAGER_COMPLETION'
+,p_title=>'Manager Completion - Current Cycle'
+,p_template=>4072358936313175081
+,p_display_sequence=>40
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select cp.manager_first_name || '' '' || cp.manager_last_name as manager_name,',
+'       uwe.email_address,',
+'       cp.total_items,',
+'       cp.completed_items,',
+'       cp.pct_complete',
+'from xxcti_uar_cycle_progress cp',
+'join xxcti_uar_workday_employee_mgr uwe',
+'  on cp.manager_id = uwe.employee_id',
+'where cp.cycle_id = xxcti_uar_cycle_pkg.current_open_cycle',
+'order by cp.pct_complete'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>50
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No open cycle right now, or no managers have items assigned.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_csv_output=>'Y'
+,p_csv_output_link_text=>'Download'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000441)
+,p_query_column_id=>1
+,p_column_alias=>'MANAGER_NAME'
+,p_column_display_sequence=>1
+,p_column_heading=>'Manager Name'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000442)
+,p_query_column_id=>2
+,p_column_alias=>'EMAIL_ADDRESS'
+,p_column_display_sequence=>2
+,p_column_heading=>'Email'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000443)
+,p_query_column_id=>3
+,p_column_alias=>'TOTAL_ITEMS'
+,p_column_display_sequence=>3
+,p_column_heading=>'Total Items'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000444)
+,p_query_column_id=>4
+,p_column_alias=>'COMPLETED_ITEMS'
+,p_column_display_sequence=>4
+,p_column_heading=>'Completed Items'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000445)
+,p_query_column_id=>5
+,p_column_alias=>'PCT_COMPLETE'
+,p_column_display_sequence=>5
+,p_column_heading=>'% Complete'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
 );
 end;
 /

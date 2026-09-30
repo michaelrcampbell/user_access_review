@@ -140,6 +140,30 @@ visible harm under classic URL rendering but breaks outright under Friendly URLs
 both link values to the same `&COLUMN.` substitution style:
 `f?p=&APP_ID.:2:&SESSION.::&DEBUG.::P2_EMPLOYEE_ID,P2_CYCLE_ID:&EMPLOYEE_ID.,&P1_CYCLE_ID.`
 
+## Stage 2 — Page 3 (Review Cycles admin page)
+
+Kept deliberately simple, using only mechanics already proven working in this file:
+- "Open New Cycle" form (plain text fields for name/dates, `YYYY-MM-DD` format hint rather
+  than a date-picker item type not yet used elsewhere) + a single button calling
+  `xxcti_uar_cycle_pkg.open_cycle` via a `NATIVE_PLSQL` process, same shape as every other
+  process in this file.
+- "Cycles" and "Manager Completion - Current Cycle" Classic Reports, same
+  `create_report_region`/`create_report_columns` pattern already proven on Page 1's original
+  form and Pages 3/4/5 in the original app.
+- Gated with `p_required_role` referencing the real "Administration Rights" scheme
+  (precedented directly on `create_page` in the original app's own admin pages).
+- Added a nav menu link to Page 3, gated the same way via `p_security_scheme=>'Administration
+  Rights'` (referencing the custom scheme by name — the parameter itself is precedented from
+  the original app's nav items, using it with a custom rather than built-in scheme name is a
+  natural, low-risk extension).
+
+**Deliberately deferred:** a "Close Cycle" button. Only one button exists on this page
+(`OPEN_CYCLE`) specifically to avoid needing an unproven "which button triggered this submit"
+conditional-process pattern — no example of that exists anywhere in this file yet. Closing a
+cycle still works fine via `xxcti_uar_cycle_pkg.close_cycle(<id>)` directly in SQL, same as
+opening did before this page existed. Revisit once there's a confirmed-safe pattern for
+multiple buttons/processes on one page.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
