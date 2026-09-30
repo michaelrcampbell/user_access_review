@@ -41,6 +41,18 @@ whenever sqlerror exit sql.sqlcode rollback
 -- is the documented, gateway-safe API and already stops page processing on
 -- its own, so the explicit e_stop_apex_engine raise after it was dropped too.
 --
+-- FIXED 2026-09-30: Page 2 still 404'd (confirmed via Page Designer's own
+-- "Run Page" button, not just a manually-typed URL) even after the above.
+-- Root cause: the redirect target was hand-built as a relative classic-
+-- syntax fragment ('f?p=' || :APP_ID || ':1:' || :APP_SESSION). This app
+-- uses Friendly URLs (confirmed: Page 1 is reached at
+-- .../uar-rebuild/my-team-review, not via :1:) -- a relative redirect from
+-- a friendly-URL request path resolves against that path and produces an
+-- unroutable URL, 404ing instead of reaching Page 1. Replaced both
+-- redirects' target with apex_page.get_url(p_page => 1), the documented
+-- runtime API that generates a correct URL (friendly or classic, whichever
+-- the app actually uses) instead of assuming one.
+--
 -- Deliberately simplified vs. the original app 104 for this first cut:
 --   - No custom logo/app icons/PWA -- omitted p_logo_type/p_logo_text
 --     entirely rather than guess at a valid token (original only ever shows
@@ -595,11 +607,11 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Enforce Manager Ownership and Cycle Status'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if xxcti_uar_security_pkg.can_review(:P2_EMPLOYEE_ID) = ''N'' then',
-'   apex_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
+'   apex_util.redirect_url(apex_page.get_url(p_page => 1));',
 'end if;',
 '',
 'if xxcti_uar_cycle_pkg.can_edit_cycle(:P2_CYCLE_ID) = ''N'' then',
-'   apex_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
+'   apex_util.redirect_url(apex_page.get_url(p_page => 1));',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000310
