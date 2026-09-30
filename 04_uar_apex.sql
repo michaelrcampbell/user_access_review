@@ -32,6 +32,15 @@ whenever sqlerror exit sql.sqlcode rollback
 --
 -- Pages 3 (Review Cycles), 4 (Audit History) follow in later stages.
 --
+-- FIXED 2026-09-29: the gate process raised ORA-20876 (APEX's generic
+-- wrapped-exception error) at runtime on Page 2. Switched both redirects
+-- from owa_util.redirect_url to apex_util.redirect_url -- the former is a
+-- legacy Oracle Web Agent API tied to the old mod_plsql/DAD gateway and is
+-- known to misbehave under ORDS (confirmed this instance runs ORDS/
+-- APEX_240200 from the error trace's package names); apex_util.redirect_url
+-- is the documented, gateway-safe API and already stops page processing on
+-- its own, so the explicit e_stop_apex_engine raise after it was dropped too.
+--
 -- Deliberately simplified vs. the original app 104 for this first cut:
 --   - No custom logo/app icons/PWA -- omitted p_logo_type/p_logo_text
 --     entirely rather than guess at a valid token (original only ever shows
@@ -586,13 +595,11 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Enforce Manager Ownership and Cycle Status'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if xxcti_uar_security_pkg.can_review(:P2_EMPLOYEE_ID) = ''N'' then',
-'   owa_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
-'   raise apex_application.e_stop_apex_engine;',
+'   apex_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
 'end if;',
 '',
 'if xxcti_uar_cycle_pkg.can_edit_cycle(:P2_CYCLE_ID) = ''N'' then',
-'   owa_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
-'   raise apex_application.e_stop_apex_engine;',
+'   apex_util.redirect_url(''f?p='' || :APP_ID || '':1:'' || :APP_SESSION);',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000310
