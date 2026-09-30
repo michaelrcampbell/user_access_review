@@ -95,14 +95,14 @@ wwv_flow_imp.import_begin (
  p_version_yyyy_mm_dd=>'2024.11.30'
 ,p_release=>'24.2.0'
 ,p_default_workspace_id=>9805500296728652
-,p_default_application_id=>105
+,p_default_application_id=>530
 ,p_default_id_offset=>3087771470140045
 ,p_default_owner=>'XXUAR'
 );
 end;
 /
 
-prompt APPLICATION 105 - Oracle User Access Review (Rebuild) -- Stage 0
+prompt APPLICATION 530 - Oracle User Access Review (Rebuild)
 
 prompt --application/delete_application
 begin
@@ -153,7 +153,7 @@ end;
 prompt --application/user_interfaces
 begin
 wwv_flow_imp_shared.create_user_interface(
- p_id=>wwv_flow_imp.id(105)
+ p_id=>wwv_flow_imp.id(530)
 ,p_theme_id=>42
 ,p_home_url=>'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.:::'
 ,p_login_url=>'f?p=&APP_ID.:LOGIN:&APP_SESSION.::&DEBUG.:::'
