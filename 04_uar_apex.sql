@@ -138,6 +138,39 @@ end;
 /
 
 prompt APPLICATION 530 - Oracle User Access Review (Rebuild)
+--
+-- Application Export:
+--   Application:     530
+--   Name:            Oracle User Access Review (Rebuild)
+--   Date and Time:   00:00 Wednesday September 30, 2026
+--   Exported By:     MICHAEL.CAMPBELL
+--   Flashback:       0
+--   Export Type:     Application Export
+--     Pages:                      4
+--       Items:                    6
+--       Processes:                5
+--       Regions:                  5
+--       Buttons:                  2
+--     Shared Components:
+--       Logic:
+--         Build Options:          1
+--       Navigation:
+--         Lists:                  2
+--       Security:
+--         Authentication:         1
+--         Authorization:          2
+--         ACL Roles:              1
+--       User Interface:
+--         Themes:                 1
+--         Templates:
+--       PWA:
+--       Globalization:
+--       Reports:
+--       E-Mail:
+--     Supporting Objects:  Included
+--   Version:         24.2.0
+--   Instance ID:     9805500296728652
+--
 
 prompt --application/delete_application
 begin
