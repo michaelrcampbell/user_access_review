@@ -3,9 +3,32 @@ set define off verify off feedback off
 whenever sqlerror exit sql.sqlcode rollback
 --------------------------------------------------------------------------------
 --
--- Oracle APEX export file -- HAND-AUTHORED, built incrementally stage by
--- stage and tested after each stage (no live instance available while
--- writing it). See APEX_BUILD_GUIDE.md / README.md in this repo.
+-- Oracle APEX export file
+--
+-- You should run this script using a SQL client connected to the database as
+-- the owner (parsing schema) of the application or as a database user with the
+-- APEX_ADMINISTRATOR_ROLE role.
+--
+-- This export file has been automatically generated. Modifying this file is not
+-- supported by Oracle and can lead to unexpected application and/or instance
+-- behavior now or in the future.
+--
+-- NOTE: Calls to apex_application_install override the defaults below.
+--
+--------------------------------------------------------------------------------
+--
+-- HAND-AUTHORED NOTES -- not part of a real Oracle export; added for this
+-- rebuild's own tracking (see APEX_BUILD_GUIDE.md / README.md in the repo).
+-- Moved below the canonical header above on 2026-09-30 after App Builder's
+-- Import wizard rejected the file as "not a valid Oracle APEX application
+-- import file" -- the canonical header's exact wording had been modified
+-- (extra text appended directly onto the "Oracle APEX export file" line),
+-- which a file-validity sniff check most likely keyed on. Lesson: never
+-- alter or append to the canonical header lines themselves -- put any
+-- custom notes in a clearly separate block instead, as below.
+--
+-- Built incrementally stage by stage and tested after each stage, since no
+-- live instance was available while writing it.
 --
 -- STAGE 0 (confirmed importing and working 2026-09-29): application shell,
 -- authentication, real authorization schemes, Global Page, Login page,
