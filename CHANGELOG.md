@@ -107,6 +107,21 @@ manually navigating to it with `P2_EMPLOYEE_ID`/`P2_CYCLE_ID` set until this is 
   history out of the SQL file (into this document) and trimming the file's own header back
   to the real, compact canonical format.
 
+## Stage 1 follow-up — Page 1 → Page 2 link (2026-09-30)
+
+Confirmed end to end: a cycle opened via `xxcti_uar_cycle_pkg.open_cycle` correctly
+populates Page 1 with real data for the manager. But Page 1's Employee ID had no link to
+Page 2 (noted as a known gap above), and "Run Page" on Page 2 from Designer just redirects
+back to Page 1 — expected, since the ownership gate sees a null `P2_EMPLOYEE_ID` and denies.
+
+Converted Page 1's report region from a Classic Report to an Interactive Grid (matching the
+original app's Page 1 exactly), specifically to use the `NATIVE_LINK` item type on the
+Employee ID region column — the only mechanism with confirmed precedent for a clickable
+report-column link (from the original app's own Page 1 IG). Link target extends the
+original's pattern to also pass `P2_CYCLE_ID`:
+`f?p=&APP_ID.:2:&SESSION.::&DEBUG.::P2_EMPLOYEE_ID,P2_CYCLE_ID:#EMPLOYEE_ID#,&P1_CYCLE_ID.`
+(`#COLUMN#` substitution for the row's own value, `&ITEM.` substitution for the page item).
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
