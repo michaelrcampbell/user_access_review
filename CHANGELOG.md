@@ -122,6 +122,24 @@ original's pattern to also pass `P2_CYCLE_ID`:
 `f?p=&APP_ID.:2:&SESSION.::&DEBUG.::P2_EMPLOYEE_ID,P2_CYCLE_ID:#EMPLOYEE_ID#,&P1_CYCLE_ID.`
 (`#COLUMN#` substitution for the row's own value, `&ITEM.` substitution for the page item).
 
+## Stage 1 follow-up — link still didn't navigate (2026-09-30)
+
+After the Page 1 → IG conversion, clicking the Employee ID link just stayed on Page 1.
+Copied the link's actual resulting URL: `...?p2_employee_id=&p2_cycle_id=&session=...&cs=...
+#EMPLOYEE_ID#,1` — both query params were empty, and the literal text `#EMPLOYEE_ID#,1` got
+dumped as a URL fragment instead of being parsed as item values. `&P1_CYCLE_ID.` (a real
+page item) substituted correctly to `1`; `#EMPLOYEE_ID#` never substituted at all, and a
+literal `#` character in the value broke the whole items/values parsing for the friendly-URL
+generator.
+
+This means the original app's `&EMPLOYEE_ID.#EMPLOYEE_ID#` link value (copied as
+`#EMPLOYEE_ID#,&P1_CYCLE_ID.` here) was mis-read — `&EMPLOYEE_ID.` (item-style syntax,
+resolving to the same-named column when no such item exists) was apparently the part that
+actually worked, with `#EMPLOYEE_ID#` being inert leftover text that happened not to cause
+visible harm under classic URL rendering but breaks outright under Friendly URLs. Changed
+both link values to the same `&COLUMN.` substitution style:
+`f?p=&APP_ID.:2:&SESSION.::&DEBUG.::P2_EMPLOYEE_ID,P2_CYCLE_ID:&EMPLOYEE_ID.,&P1_CYCLE_ID.`
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
