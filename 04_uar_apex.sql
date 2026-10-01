@@ -321,6 +321,52 @@ wwv_flow_imp_page.create_page(
 ,p_page_template_options=>'#DEFAULT#'
 ,p_protection_level=>'D'
 );
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000600)
+,p_plug_name=>'Role-Based Nav Hiding'
+,p_plug_display_sequence=>10
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if xxcti_uar_security_pkg.is_admin = ''N'' then',
+'   htp.p(''<style>'');',
+'   htp.p(''li:has(a[href*="review-cycles" i]):not(.t-Header-logo-link),'');',
+'   htp.p(''li:has(a[href*="audit-history" i]):not(.t-Header-logo-link),'');',
+'   htp.p(''li:has(a[href*="close-cycle" i]):not(.t-Header-logo-link)'');',
+'   htp.p(''{ display:none!important; }'');',
+'   htp.p(''a[href*="review-cycles" i]:not(.t-Header-logo-link),'');',
+'   htp.p(''a[href*="audit-history" i]:not(.t-Header-logo-link),'');',
+'   htp.p(''a[href*="close-cycle" i]:not(.t-Header-logo-link)'');',
+'   htp.p(''{ display:none!important; }'');',
+'   htp.p(''</style>'');',
+'end if;'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000610)
+,p_plug_name=>'Environment Badge'
+,p_plug_display_sequence=>20
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_env   varchar2(10);',
+'   l_color varchar2(10);',
+'   l_name  varchar2(100) := sys_context(''userenv'',''con_name'');',
+'begin',
+'   if l_name like ''%PROD%'' then',
+'      l_env := ''PROD''; l_color := ''#C00000'';',
+'   elsif l_name like ''%TEST%'' then',
+'      l_env := ''TEST''; l_color := ''#E6A817'';',
+'   elsif l_name like ''%DEV%'' then',
+'      l_env := ''DEV'';  l_color := ''#2E75B6'';',
+'   end if;',
+'',
+'   if l_env is not null then',
+'      htp.p(''<div style="position:fixed;top:0;right:0;z-index:9999;'' ||',
+'            ''background:'' || l_color || '';color:#fff;padding:2px 10px;'' ||',
+'            ''font-size:11px;font-weight:bold;letter-spacing:0.5px;'' ||',
+'            ''border-radius:0 0 0 4px;">'' || l_env || ''</div>'');',
+'   end if;',
+'end;'))
+);
 end;
 /
 prompt --application/pages/page_00001

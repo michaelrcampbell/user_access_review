@@ -208,6 +208,37 @@ Pages 3/4/5 by role and a DEV/TEST/PROD env badge (both need a `NATIVE_PLSQL` dy
 region, zero precedent here), and confirm() dialogs (need a Dynamic Action, zero precedent
 here either).
 
+## Nav-hiding + env badge, following the PMO Hub playbook (2026-10-01)
+
+Per the user's reminder to use what PMO Hub already proved out (see memory
+`feedback_apex_treeview_nav_hiding` / `project_pmo_hub`), rather than improvising:
+
+- **Nav-hiding**: a `NATIVE_PLSQL` region on the Global Page emits a `<style>` block with a
+  CSS attribute selector on `href` (`li:has(a[href*="review-cycles" i])...`), guarded by
+  `xxcti_uar_security_pkg.is_admin = 'N'` — never JS DOM matching, exactly per the PMO Hub
+  lesson (the Tree View widget re-renders its DOM asynchronously, so a JS approach loses
+  that race; CSS re-applies automatically to anything the widget inserts). Matches on each
+  page's alias (`review-cycles`/`audit-history`/`close-cycle`), with `:not(.t-Header-logo-link)`
+  on every selector per the second PMO Hub gotcha (home page's logo link resolving to the
+  same alias) — not actually triggered here since the home page is `my-team-review`, but
+  kept as the same defensive habit.
+- **Env badge**: a second `NATIVE_PLSQL` region, `SYS_CONTEXT('USERENV','CON_NAME')` matched
+  against `%DEV%/%TEST%/%PROD%`, using PMO Hub's exact proven color scheme
+  (`DEV=#2E75B6`/`TEST=#E6A817`/`PROD=#C00000`). Adapted the positioning: PMO Hub's badge
+  JS-reads its "PMO Hub" logo's computed typography to sit flush beside it; this app has no
+  custom logo at all right now (removed earlier — see Stage 0 notes), so the badge is just a
+  fixed-position corner element instead rather than inventing a selector for a logo that
+  doesn't exist.
+
+Both use `p_plug_source_type=>'NATIVE_PLSQL'` on `create_page_plug` — no precedent for a
+PL/SQL Dynamic Content *region* anywhere in this file before now (only the `NATIVE_PLSQL`
+*process* type was precedented, on Pages 1/2's gate processes), so this is this file's
+first genuine guess at that exact token. Every quote in both PL/SQL blocks was mechanically
+quote-counted (even count per line) before committing, not eyeballed, per the
+quote-escaping-layers lesson — a real mistake (using `\"` to escape double quotes, which
+has no meaning in Oracle SQL/PL/SQL) was caught and fixed this way before even an import
+attempt.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
