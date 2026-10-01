@@ -279,6 +279,46 @@ corner badge from the previous commit.
   link added, and `delete-cycle` added to the Global Page's nav-hiding selector list
   alongside the other admin-only pages.
 
+## Several user-requested changes in one batch (2026-10-01)
+
+- **Env badge excludes PROD**: showing a badge in production is pointless noise; removed the
+  PROD branch from the badge's PL/SQL entirely so `l_env` stays null there and nothing
+  renders. DEV/TEST unaffected.
+
+- **Consolidated Close/Delete Cycle onto Page 3**, removing the separate Pages 5 and 6
+  entirely (including their nav items). This reopened the "multiple buttons on one page"
+  risk deliberately avoided earlier — solved cleanly without any new export-API parameter:
+  each process checks `:REQUEST` (the clicked button's name, which APEX sets automatically
+  on submit) as a plain `IF` statement *inside its own PL/SQL body*. No process-level
+  condition parameter needed at all, so zero new guessing risk. The pre-existing "Open New
+  Cycle" process was retrofitted with the same `:REQUEST = 'OPEN_CYCLE'` guard, since it
+  previously ran unconditionally on *any* submit of the page — fine with one button, a real
+  bug with three. `xxcti_uar_cycle_pkg.delete_cycle` (hard delete, no undo) and its UI moved
+  from the removed Page 6 onto this same page/pattern.
+
+- **Resized Page 3's text/date fields to 20 characters** (cycle name, period start/end, due
+  date, and the new shared cycle-id field for close/delete) — were up to 30.
+
+- **Page 1 manager-switch now actually refreshes the employee list.** The dropdown already
+  showed every manager to admins, but nothing re-queried the IG when the selection changed —
+  a real gap, not just a missing confirmation. Added the Dynamic Action the original app 104
+  had for exactly this (`New`/`change` event on `P1_MANAGER` → `NATIVE_SUBMIT_PAGE` →
+  `NATIVE_REFRESH` on the employees region), copied with full confirmed precedent straight
+  from that file, not guessed. No condition params used on the DA event, per the existing
+  gotcha about those.
+
+- **New Page 7 (Admin Users)**: add/remove rows in `xxcti_uar_admins` from the app instead of
+  only via direct SQL. Same shared-item + `:REQUEST`-guarded-processes pattern as Page 3's
+  close/delete. Add is idempotent (duplicate email is silently ignored via
+  `dup_val_on_index`); Remove explicitly blocks removing your own logged-in email
+  (`sys_context('APEX$SESSION','APP_USER')`) to prevent a self-lockout with no other admin
+  able to undo it. Nav link and Global Page nav-hiding entry added alongside the other admin
+  pages.
+
+Every PL/SQL block touched in this batch was mechanically quote-counted (even count per
+line) before committing, consistent with the discipline established after the `\"`
+escaping mistake earlier.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a

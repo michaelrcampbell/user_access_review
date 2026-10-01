@@ -165,19 +165,11 @@ wwv_flow_imp_shared.create_list_item(
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_imp_shared.create_list_item(
- p_id=>wwv_flow_imp.id(9700000000000024)
+ p_id=>wwv_flow_imp.id(9700000000000026)
 ,p_list_item_display_sequence=>40
-,p_list_item_link_text=>'Close Cycle'
-,p_list_item_link_target=>'f?p=&APP_ID.:5:&SESSION.::&DEBUG.::::'
-,p_list_item_icon=>'fa-calendar-times-o'
-,p_list_item_current_type=>'TARGET_PAGE'
-);
-wwv_flow_imp_shared.create_list_item(
- p_id=>wwv_flow_imp.id(9700000000000025)
-,p_list_item_display_sequence=>50
-,p_list_item_link_text=>'Delete Cycle'
-,p_list_item_link_target=>'f?p=&APP_ID.:6:&SESSION.::&DEBUG.::::'
-,p_list_item_icon=>'fa-trash-o'
+,p_list_item_link_text=>'Admin Users'
+,p_list_item_link_target=>'f?p=&APP_ID.:7:&SESSION.::&DEBUG.::::'
+,p_list_item_icon=>'fa-user-plus'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 end;
@@ -341,13 +333,11 @@ wwv_flow_imp_page.create_page_plug(
 '   htp.p(''<style>'');',
 '   htp.p(''li:has(a[href*="review-cycles" i]):not(.t-Header-logo-link),'');',
 '   htp.p(''li:has(a[href*="audit-history" i]):not(.t-Header-logo-link),'');',
-'   htp.p(''li:has(a[href*="close-cycle" i]):not(.t-Header-logo-link),'');',
-'   htp.p(''li:has(a[href*="delete-cycle" i]):not(.t-Header-logo-link)'');',
+'   htp.p(''li:has(a[href*="admin-users" i]):not(.t-Header-logo-link)'');',
 '   htp.p(''{ display:none!important; }'');',
 '   htp.p(''a[href*="review-cycles" i]:not(.t-Header-logo-link),'');',
 '   htp.p(''a[href*="audit-history" i]:not(.t-Header-logo-link),'');',
-'   htp.p(''a[href*="close-cycle" i]:not(.t-Header-logo-link),'');',
-'   htp.p(''a[href*="delete-cycle" i]:not(.t-Header-logo-link)'');',
+'   htp.p(''a[href*="admin-users" i]:not(.t-Header-logo-link)'');',
 '   htp.p(''{ display:none!important; }'');',
 '   htp.p(''</style>'');',
 'end if;'))
@@ -363,9 +353,7 @@ wwv_flow_imp_page.create_page_plug(
 '   l_color varchar2(10);',
 '   l_name  varchar2(100) := sys_context(''userenv'',''con_name'');',
 'begin',
-'   if l_name like ''%PROD%'' then',
-'      l_env := ''PROD''; l_color := ''#C00000'';',
-'   elsif l_name like ''%TEST%'' then',
+'   if l_name like ''%TEST%'' then',
 '      l_env := ''TEST''; l_color := ''#E6A817'';',
 '   elsif l_name like ''%DEV%'' then',
 '      l_env := ''DEV'';  l_color := ''#2E75B6'';',
@@ -812,6 +800,36 @@ wwv_flow_imp_page.create_ig_report_column(
 ,p_column_id=>wwv_flow_imp.id(9700000000000246)
 ,p_is_visible=>true
 ,p_is_frozen=>false
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000000280)
+,p_name=>'New'
+,p_event_sequence=>10
+,p_triggering_element_type=>'ITEM'
+,p_triggering_element=>'P1_MANAGER'
+,p_bind_type=>'bind'
+,p_execution_type=>'IMMEDIATE'
+,p_bind_event_type=>'change'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000281)
+,p_event_id=>wwv_flow_imp.id(9700000000000280)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_SUBMIT_PAGE'
+,p_attribute_02=>'N'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000282)
+,p_event_id=>wwv_flow_imp.id(9700000000000280)
+,p_event_result=>'TRUE'
+,p_action_sequence=>20
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_REFRESH'
+,p_affected_elements_type=>'REGION'
+,p_affected_region_id=>wwv_flow_imp.id(9700000000000240)
+,p_attribute_01=>'N'
 );
 end;
 /
@@ -1441,7 +1459,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
 ,p_prompt=>'Cycle Name'
 ,p_display_as=>'NATIVE_TEXT_FIELD'
-,p_cSize=>30
+,p_cSize=>20
 ,p_cMaxlength=>120
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
@@ -1455,7 +1473,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
 ,p_prompt=>'Period Start'
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
-,p_cSize=>15
+,p_cSize=>20
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
 );
@@ -1466,7 +1484,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
 ,p_prompt=>'Period End'
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
-,p_cSize=>15
+,p_cSize=>20
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
 );
@@ -1477,7 +1495,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000400)
 ,p_prompt=>'Due Date'
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
-,p_cSize=>15
+,p_cSize=>20
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
 );
@@ -1503,17 +1521,106 @@ wwv_flow_imp_page.create_page_process(
 'declare',
 '   l_cycle_id number;',
 'begin',
-'   xxcti_uar_cycle_pkg.open_cycle(',
-'      p_cycle_name   => :P3_NEW_CYCLE_NAME,',
-'      p_period_start => to_date(:P3_NEW_PERIOD_START, ''YYYY-MM-DD''),',
-'      p_period_end   => to_date(:P3_NEW_PERIOD_END, ''YYYY-MM-DD''),',
-'      p_due_date     => to_date(:P3_NEW_DUE_DATE, ''YYYY-MM-DD''),',
-'      p_cycle_id     => l_cycle_id',
-'   );',
+'   if :REQUEST = ''OPEN_CYCLE'' then',
+'      xxcti_uar_cycle_pkg.open_cycle(',
+'         p_cycle_name   => :P3_NEW_CYCLE_NAME,',
+'         p_period_start => to_date(:P3_NEW_PERIOD_START, ''YYYY-MM-DD''),',
+'         p_period_end   => to_date(:P3_NEW_PERIOD_END, ''YYYY-MM-DD''),',
+'         p_due_date     => to_date(:P3_NEW_DUE_DATE, ''YYYY-MM-DD''),',
+'         p_cycle_id     => l_cycle_id',
+'      );',
+'   end if;',
 'end;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_internal_uid=>1700000000000410
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000450)
+,p_plug_name=>'P3_MANAGE_EXISTING_CYCLE'
+,p_title=>'Close or Delete a Cycle'
+,p_icon_css_classes=>'fa-lg fa-cogs'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>20
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000451)
+,p_name=>'P3_ACTION_CYCLE_ID'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000450)
+,p_prompt=>'Cycle Id'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>20
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000452)
+,p_process_sequence=>5
+,p_process_point=>'BEFORE_HEADER'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Default Current Open Cycle'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :P3_ACTION_CYCLE_ID is null then',
+'   :P3_ACTION_CYCLE_ID := xxcti_uar_cycle_pkg.current_open_cycle;',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_internal_uid=>1700000000000452
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000453)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
+,p_button_name=>'CLOSE_CYCLE'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Close Cycle'
+,p_button_position=>'NEXT'
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000454)
+,p_button_sequence=>20
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
+,p_button_name=>'DELETE_CYCLE'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_image_alt=>'Delete Cycle (permanent -- no undo)'
+,p_button_position=>'NEXT'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000455)
+,p_process_sequence=>15
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Close Cycle'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''CLOSE_CYCLE'' then',
+'   xxcti_uar_cycle_pkg.close_cycle(:P3_ACTION_CYCLE_ID);',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000455
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000456)
+,p_process_sequence=>16
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Delete Cycle'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''DELETE_CYCLE'' then',
+'   xxcti_uar_cycle_pkg.delete_cycle(:P3_ACTION_CYCLE_ID);',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000456
 );
 wwv_flow_imp_page.create_report_region(
  p_id=>wwv_flow_imp.id(9700000000000420)
@@ -1991,82 +2098,107 @@ wwv_flow_imp_page.create_report_columns(
 );
 end;
 /
-prompt --application/pages/page_00005
+prompt --application/pages/page_00007
 begin
 wwv_flow_imp_page.create_page(
- p_id=>5
-,p_name=>'Close Cycle'
-,p_alias=>'CLOSE-CYCLE'
-,p_step_title=>'Close Cycle'
+ p_id=>7
+,p_name=>'Admin Users'
+,p_alias=>'ADMIN-USERS'
+,p_step_title=>'Admin Users'
 ,p_autocomplete_on_off=>'OFF'
 ,p_page_template_options=>'#DEFAULT#'
 ,p_required_role=>wwv_flow_imp.id(9700000000000051)
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
- p_id=>wwv_flow_imp.id(9700000000000500)
-,p_plug_name=>'P5_CLOSE_CYCLE'
-,p_title=>'Close Cycle'
-,p_icon_css_classes=>'fa-lg fa-calendar-times-o'
+ p_id=>wwv_flow_imp.id(9700000000000800)
+,p_plug_name=>'P7_ADD_REMOVE_ADMIN'
+,p_title=>'Add or Remove Admin'
+,p_icon_css_classes=>'fa-lg fa-user-plus'
 ,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
 ,p_plug_template=>2674017834225413037
 ,p_plug_display_sequence=>10
 ,p_location=>null
 );
 wwv_flow_imp_page.create_page_item(
- p_id=>wwv_flow_imp.id(9700000000000501)
-,p_name=>'P5_CYCLE_ID'
+ p_id=>wwv_flow_imp.id(9700000000000801)
+,p_name=>'P7_EMAIL'
 ,p_item_sequence=>10
-,p_item_plug_id=>wwv_flow_imp.id(9700000000000500)
-,p_prompt=>'Cycle Id to Close'
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000800)
+,p_prompt=>'Email Address'
 ,p_display_as=>'NATIVE_TEXT_FIELD'
-,p_cSize=>15
+,p_cSize=>20
+,p_cMaxlength=>240
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'trim_spaces', 'BOTH')).to_clob
 );
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000802)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
+,p_button_name=>'ADD_ADMIN'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Add Admin'
+,p_button_position=>'NEXT'
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000803)
+,p_button_sequence=>20
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
+,p_button_name=>'REMOVE_ADMIN'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_image_alt=>'Remove Admin'
+,p_button_position=>'NEXT'
+);
 wwv_flow_imp_page.create_page_process(
- p_id=>wwv_flow_imp.id(9700000000000510)
+ p_id=>wwv_flow_imp.id(9700000000000810)
 ,p_process_sequence=>10
-,p_process_point=>'BEFORE_HEADER'
+,p_process_point=>'AFTER_SUBMIT'
 ,p_process_type=>'NATIVE_PLSQL'
-,p_process_name=>'Default Current Open Cycle'
+,p_process_name=>'Add Admin'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'if :P5_CYCLE_ID is null then',
-'   :P5_CYCLE_ID := xxcti_uar_cycle_pkg.current_open_cycle;',
+'if :REQUEST = ''ADD_ADMIN'' then',
+'   begin',
+'      insert into xxcti_uar_admins (email_address) values (:P7_EMAIL);',
+'      commit;',
+'   exception',
+'      when dup_val_on_index then',
+'         null;',
+'   end;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
-,p_internal_uid=>1700000000000510
-);
-wwv_flow_imp_page.create_page_button(
- p_id=>wwv_flow_imp.id(9700000000000505)
-,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000500)
-,p_button_name=>'CLOSE_CYCLE'
-,p_button_action=>'SUBMIT'
-,p_button_template_options=>'#DEFAULT#'
-,p_button_template_id=>4072362960822175091
-,p_button_is_hot=>'Y'
-,p_button_image_alt=>'Close Cycle'
-,p_button_position=>'NEXT'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000810
 );
 wwv_flow_imp_page.create_page_process(
- p_id=>wwv_flow_imp.id(9700000000000520)
-,p_process_sequence=>20
+ p_id=>wwv_flow_imp.id(9700000000000811)
+,p_process_sequence=>11
 ,p_process_point=>'AFTER_SUBMIT'
 ,p_process_type=>'NATIVE_PLSQL'
-,p_process_name=>'Close Cycle'
+,p_process_name=>'Remove Admin'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'xxcti_uar_cycle_pkg.close_cycle(:P5_CYCLE_ID);'))
+'if :REQUEST = ''REMOVE_ADMIN'' then',
+'   if upper(:P7_EMAIL) = upper(sys_context(''APEX$SESSION'',''APP_USER'')) then',
+'      raise_application_error(-20002, ''You cannot remove your own admin access from here.'');',
+'   end if;',
+'   delete from xxcti_uar_admins where upper(email_address) = upper(:P7_EMAIL);',
+'   commit;',
+'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
-,p_internal_uid=>1700000000000520
+,p_internal_uid=>1700000000000811
 );
 wwv_flow_imp_page.create_report_region(
- p_id=>wwv_flow_imp.id(9700000000000530)
-,p_name=>'P5_CYCLES'
-,p_title=>'Cycles'
+ p_id=>wwv_flow_imp.id(9700000000000820)
+,p_name=>'P7_ADMINS'
+,p_title=>'Current Admins'
 ,p_template=>4072358936313175081
 ,p_display_sequence=>30
 ,p_region_template_options=>'#DEFAULT#'
@@ -2074,15 +2206,15 @@ wwv_flow_imp_page.create_report_region(
 ,p_source_type=>'NATIVE_SQL_REPORT'
 ,p_query_type=>'SQL'
 ,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'select cycle_id, cycle_name, status, due_date, closed_date',
-'from xxcti_uar_review_cycles',
-'order by period_start desc'))
+'select email_address, added_by, added_date',
+'from xxcti_uar_admins',
+'order by added_date desc'))
 ,p_ajax_enabled=>'Y'
 ,p_lazy_loading=>false
 ,p_query_row_template=>2538654340625403440
 ,p_query_num_rows=>50
 ,p_query_options=>'DERIVED_REPORT_COLUMNS'
-,p_query_no_data_found=>'No review cycles have been created yet.'
+,p_query_no_data_found=>'No admins found -- that should not be possible if you are seeing this page.'
 ,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
 ,p_query_row_count_max=>500
 ,p_pagination_display_position=>'BOTTOM_RIGHT'
@@ -2090,193 +2222,30 @@ wwv_flow_imp_page.create_report_region(
 ,p_plug_query_strip_html=>'N'
 );
 wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000531)
+ p_id=>wwv_flow_imp.id(9700000000000821)
 ,p_query_column_id=>1
-,p_column_alias=>'CYCLE_ID'
+,p_column_alias=>'EMAIL_ADDRESS'
 ,p_column_display_sequence=>1
-,p_column_heading=>'Cycle Id'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
+,p_column_heading=>'Email Address'
+,p_heading_alignment=>'LEFT'
 ,p_derived_column=>'N'
 );
 wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000532)
+ p_id=>wwv_flow_imp.id(9700000000000822)
 ,p_query_column_id=>2
-,p_column_alias=>'CYCLE_NAME'
+,p_column_alias=>'ADDED_BY'
 ,p_column_display_sequence=>2
-,p_column_heading=>'Cycle Name'
+,p_column_heading=>'Added By'
 ,p_heading_alignment=>'LEFT'
 ,p_derived_column=>'N'
 );
 wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000533)
+ p_id=>wwv_flow_imp.id(9700000000000823)
 ,p_query_column_id=>3
-,p_column_alias=>'STATUS'
+,p_column_alias=>'ADDED_DATE'
 ,p_column_display_sequence=>3
-,p_column_heading=>'Status'
+,p_column_heading=>'Added Date'
 ,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000534)
-,p_query_column_id=>4
-,p_column_alias=>'DUE_DATE'
-,p_column_display_sequence=>4
-,p_column_heading=>'Due Date'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000535)
-,p_query_column_id=>5
-,p_column_alias=>'CLOSED_DATE'
-,p_column_display_sequence=>5
-,p_column_heading=>'Closed Date'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-end;
-/
-prompt --application/pages/page_00006
-begin
-wwv_flow_imp_page.create_page(
- p_id=>6
-,p_name=>'Delete Cycle'
-,p_alias=>'DELETE-CYCLE'
-,p_step_title=>'Delete Cycle'
-,p_autocomplete_on_off=>'OFF'
-,p_page_template_options=>'#DEFAULT#'
-,p_required_role=>wwv_flow_imp.id(9700000000000051)
-,p_protection_level=>'C'
-);
-wwv_flow_imp_page.create_page_plug(
- p_id=>wwv_flow_imp.id(9700000000000700)
-,p_plug_name=>'P6_DELETE_CYCLE'
-,p_title=>'Delete Cycle'
-,p_icon_css_classes=>'fa-lg fa-trash-o'
-,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
-,p_plug_template=>2674017834225413037
-,p_plug_display_sequence=>10
-,p_location=>null
-);
-wwv_flow_imp_page.create_page_item(
- p_id=>wwv_flow_imp.id(9700000000000701)
-,p_name=>'P6_CYCLE_ID'
-,p_item_sequence=>10
-,p_item_plug_id=>wwv_flow_imp.id(9700000000000700)
-,p_prompt=>'Cycle Id to PERMANENTLY DELETE (including all review items and approval history -- no undo)'
-,p_display_as=>'NATIVE_TEXT_FIELD'
-,p_cSize=>15
-,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#'
-,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
-  'trim_spaces', 'BOTH')).to_clob
-);
-wwv_flow_imp_page.create_page_button(
- p_id=>wwv_flow_imp.id(9700000000000705)
-,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000700)
-,p_button_name=>'DELETE_CYCLE'
-,p_button_action=>'SUBMIT'
-,p_button_template_options=>'#DEFAULT#'
-,p_button_template_id=>4072362960822175091
-,p_button_is_hot=>'Y'
-,p_button_image_alt=>'Delete Cycle'
-,p_button_position=>'NEXT'
-);
-wwv_flow_imp_page.create_page_process(
- p_id=>wwv_flow_imp.id(9700000000000710)
-,p_process_sequence=>10
-,p_process_point=>'AFTER_SUBMIT'
-,p_process_type=>'NATIVE_PLSQL'
-,p_process_name=>'Delete Cycle'
-,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'xxcti_uar_cycle_pkg.delete_cycle(:P6_CYCLE_ID);'))
-,p_process_clob_language=>'PLSQL'
-,p_error_display_location=>'INLINE_IN_NOTIFICATION'
-,p_internal_uid=>1700000000000710
-);
-wwv_flow_imp_page.create_report_region(
- p_id=>wwv_flow_imp.id(9700000000000720)
-,p_name=>'P6_CYCLES'
-,p_title=>'Cycles'
-,p_template=>4072358936313175081
-,p_display_sequence=>30
-,p_region_template_options=>'#DEFAULT#'
-,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
-,p_source_type=>'NATIVE_SQL_REPORT'
-,p_query_type=>'SQL'
-,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'select c.cycle_id, c.cycle_name, c.status, c.due_date, c.closed_date,',
-'       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id) as total_items',
-'from xxcti_uar_review_cycles c',
-'order by c.period_start desc'))
-,p_ajax_enabled=>'Y'
-,p_lazy_loading=>false
-,p_query_row_template=>2538654340625403440
-,p_query_num_rows=>50
-,p_query_options=>'DERIVED_REPORT_COLUMNS'
-,p_query_no_data_found=>'No review cycles have been created yet.'
-,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
-,p_query_row_count_max=>500
-,p_pagination_display_position=>'BOTTOM_RIGHT'
-,p_sort_null=>'L'
-,p_plug_query_strip_html=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000721)
-,p_query_column_id=>1
-,p_column_alias=>'CYCLE_ID'
-,p_column_display_sequence=>1
-,p_column_heading=>'Cycle Id'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000722)
-,p_query_column_id=>2
-,p_column_alias=>'CYCLE_NAME'
-,p_column_display_sequence=>2
-,p_column_heading=>'Cycle Name'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000723)
-,p_query_column_id=>3
-,p_column_alias=>'STATUS'
-,p_column_display_sequence=>3
-,p_column_heading=>'Status'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000724)
-,p_query_column_id=>4
-,p_column_alias=>'DUE_DATE'
-,p_column_display_sequence=>4
-,p_column_heading=>'Due Date'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000725)
-,p_query_column_id=>5
-,p_column_alias=>'CLOSED_DATE'
-,p_column_display_sequence=>5
-,p_column_heading=>'Closed Date'
-,p_heading_alignment=>'LEFT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000726)
-,p_query_column_id=>6
-,p_column_alias=>'TOTAL_ITEMS'
-,p_column_display_sequence=>6
-,p_column_heading=>'Total Items'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
 ,p_derived_column=>'N'
 );
 end;
