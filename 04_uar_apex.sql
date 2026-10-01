@@ -152,7 +152,6 @@ wwv_flow_imp_shared.create_list_item(
 ,p_list_item_link_text=>'Review Cycles'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-calendar'
-,p_security_scheme=>'Administration Rights'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 end;

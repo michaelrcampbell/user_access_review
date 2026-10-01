@@ -152,10 +152,7 @@ Kept deliberately simple, using only mechanics already proven working in this fi
   form and Pages 3/4/5 in the original app.
 - Gated with `p_required_role` referencing the real "Administration Rights" scheme
   (precedented directly on `create_page` in the original app's own admin pages).
-- Added a nav menu link to Page 3, gated the same way via `p_security_scheme=>'Administration
-  Rights'` (referencing the custom scheme by name — the parameter itself is precedented from
-  the original app's nav items, using it with a custom rather than built-in scheme name is a
-  natural, low-risk extension).
+- Added a nav menu link to Page 3.
 
 **Deliberately deferred:** a "Close Cycle" button. Only one button exists on this page
 (`OPEN_CYCLE`) specifically to avoid needing an unproven "which button triggered this submit"
@@ -163,6 +160,21 @@ conditional-process pattern — no example of that exists anywhere in this file 
 cycle still works fine via `xxcti_uar_cycle_pkg.close_cycle(<id>)` directly in SQL, same as
 opening did before this page existed. Revisit once there's a confirmed-safe pattern for
 multiple buttons/processes on one page.
+
+## Stage 2 follow-up — bad nav-item authorization guess (2026-10-01)
+
+`p_security_scheme=>'Administration Rights'` on the Page 3 nav list item caused
+`APEX.AUTHORIZATION.UNHANDLED_ERROR` / `ORA-06502` (character to number conversion error)
+inside `APEX_240200.WWV_FLOW_AUTHORIZATION` as soon as the nav menu rendered. `p_security_scheme`
+on a list item is apparently only valid for the built-in reserved constants (like
+`MUST_NOT_BE_PUBLIC_USER`, the only value ever seen on a list item in the original app) —
+not a way to reference a custom-named authorization scheme by string; the authorization
+resolver apparently tries to convert it to something numeric internally. No precedent
+anywhere in this file for gating a list item by a custom scheme at all — removed the
+parameter entirely rather than guess again at the right one. The real protection (Page 3's
+`p_required_role`, which *is* precedented) was never affected; the nav link just shows to
+everyone now, and non-admins get rejected by the page itself if they click it, which is
+normal APEX behavior, not a gap.
 
 ## Constraint driving the Import-wizard requirement
 
