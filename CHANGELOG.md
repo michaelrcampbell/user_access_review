@@ -263,6 +263,22 @@ corner badge from the previous commit.
   need the doubled-`''` treatment, kept to a minimum on purpose to reduce where a
   quote-counting mistake could hide.
 
+## Date pickers on Page 3 + Delete Cycle as Page 6 (2026-10-01)
+
+- **Date pickers**: switched Page 3's three date fields (period start/end, due date) from
+  plain `NATIVE_TEXT_FIELD` to `NATIVE_DATE_PICKER_APEX`, APEX's standard native date picker.
+  Kept the item attributes minimal (none specified, relying on the plugin's defaults) to
+  reduce the chance of a wrong attribute value — first use of this item type in this file.
+  The `to_date(..., 'YYYY-MM-DD')` conversions in the open-cycle process were left
+  unchanged; the native date picker stores session state in that same ISO format
+  internally regardless of what's displayed to the user.
+- **Delete Cycle**: new `xxcti_uar_cycle_pkg.delete_cycle` procedure (hard delete of a cycle
+  and all its review items, including any approval/comment history — no undo) plus Page 6,
+  mirroring Page 5's exact proven single-button shape (text item, one button, one process,
+  a cycles list for reference) rather than adding a second button to an existing page. Nav
+  link added, and `delete-cycle` added to the Global Page's nav-hiding selector list
+  alongside the other admin-only pages.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
