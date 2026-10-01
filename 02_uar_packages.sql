@@ -127,6 +127,11 @@ create or replace package xxcti_uar_cycle_pkg as
     -- 'Y'/'N' -- whether p_cycle_id currently accepts edits.
     function can_edit_cycle(p_cycle_id in number) return varchar2;
 
+    -- Permanently deletes a cycle and every review item in it -- including
+    -- any approval/denial/comment history already recorded. No undo. Admin
+    -- UI only (Page 6), intended for cleaning up test/mistake cycles.
+    procedure delete_cycle(p_cycle_id in number);
+
 end xxcti_uar_cycle_pkg;
 /
 show errors
@@ -220,6 +225,13 @@ create or replace package body xxcti_uar_cycle_pkg as
         when no_data_found then
             return 'N';
     end can_edit_cycle;
+
+    procedure delete_cycle(p_cycle_id in number) is
+    begin
+        delete from xxcti_uar_review_items where cycle_id = p_cycle_id;
+        delete from xxcti_uar_review_cycles where cycle_id = p_cycle_id;
+        commit;
+    end delete_cycle;
 
 end xxcti_uar_cycle_pkg;
 /
