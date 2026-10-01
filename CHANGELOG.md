@@ -239,6 +239,30 @@ quote-escaping-layers lesson — a real mistake (using `\"` to escape double quo
 has no meaning in Oracle SQL/PL/SQL) was caught and fixed this way before even an import
 attempt.
 
+## App title + badge positioning, matching PMO Hub more closely (2026-10-01)
+
+User asked for the app title ("Oracle User Access Review") and the env badge positioned
+beside it on the left, above the nav bar — same as PMO Hub, rather than the generic fixed
+corner badge from the previous commit.
+
+- **App title**: added `p_logo_type=>'T'` + `p_logo_text=>'Oracle User Access Review'` to
+  `create_flow`. Confirmed precedent this time, not a guess — `f113.sql` (a real export from
+  this same workspace) uses exactly `p_logo_type=>'T'` + `p_logo_text=>'test'`, a genuinely
+  different value from the original app 104's `'IT'` (Image+Text). `'T'` is text-only, which
+  is what's needed here since this app has no logo image.
+- **Badge positioning**: rewrote the Environment Badge region to inject a `<script>` that
+  finds `.t-Header-logo-link` (Universal Theme's standard logo class — already relied on in
+  the nav-hiding region's `:not()` guards, so confirmed to exist), reads its computed font
+  via `getComputedStyle`, and inserts a styled `<span>` badge right after it — matching PMO
+  Hub's actual technique (JS-matching the logo's typography) rather than a plain fixed-
+  position div.
+- Every line of the rewritten PL/SQL block was mechanically quote-counted (even count per
+  line) before committing. Wrote the JS/HTML content using double quotes exclusively for its
+  own string literals specifically so none of it needs escaping at the outer PL/SQL-string
+  level — only the two variable-interpolation lines (`l_env`/`l_color` spliced via `||`)
+  need the doubled-`''` treatment, kept to a minimum on purpose to reduce where a
+  quote-counting mistake could hide.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a

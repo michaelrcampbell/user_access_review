@@ -88,6 +88,8 @@ wwv_imp_workspace.create_flow(
 ,p_timestamp_tz_format=>'DS'
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
 ,p_authentication_id=>wwv_flow_imp.id(9700000000000010)
+,p_logo_type=>'T'
+,p_logo_text=>'Oracle User Access Review'
 ,p_proxy_server=>nvl(wwv_flow_application_install.get_proxy,'')
 ,p_no_proxy_domains=>nvl(wwv_flow_application_install.get_no_proxy_domains,'')
 ,p_flow_version=>'Rebuild 0.1 (Stage 0)'
@@ -360,10 +362,26 @@ wwv_flow_imp_page.create_page_plug(
 '   end if;',
 '',
 '   if l_env is not null then',
-'      htp.p(''<div style="position:fixed;top:0;right:0;z-index:9999;'' ||',
-'            ''background:'' || l_color || '';color:#fff;padding:2px 10px;'' ||',
-'            ''font-size:11px;font-weight:bold;letter-spacing:0.5px;'' ||',
-'            ''border-radius:0 0 0 4px;">'' || l_env || ''</div>'');',
+'      htp.p(''<script>'');',
+'      htp.p(''(function(){'');',
+'      htp.p(''var logo = document.querySelector(".t-Header-logo-link");'');',
+'      htp.p(''if (!logo) return;'');',
+'      htp.p(''var cs = window.getComputedStyle(logo);'');',
+'      htp.p(''var badge = document.createElement("span");'');',
+'      htp.p(''badge.textContent = "'' || l_env || ''";'');',
+'      htp.p(''badge.style.marginLeft = "10px";'');',
+'      htp.p(''badge.style.padding = "2px 10px";'');',
+'      htp.p(''badge.style.borderRadius = "4px";'');',
+'      htp.p(''badge.style.fontFamily = cs.fontFamily;'');',
+'      htp.p(''badge.style.fontWeight = "bold";'');',
+'      htp.p(''badge.style.fontSize = "11px";'');',
+'      htp.p(''badge.style.color = "#fff";'');',
+'      htp.p(''badge.style.backgroundColor = "'' || l_color || ''";'');',
+'      htp.p(''badge.style.verticalAlign = "middle";'');',
+'      htp.p(''badge.style.display = "inline-block";'');',
+'      htp.p(''logo.parentNode.insertBefore(badge, logo.nextSibling);'');',
+'      htp.p(''})();'');',
+'      htp.p(''</script>'');',
 '   end if;',
 'end;'))
 );
