@@ -154,6 +154,14 @@ wwv_flow_imp_shared.create_list_item(
 ,p_list_item_icon=>'fa-calendar'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
+wwv_flow_imp_shared.create_list_item(
+ p_id=>wwv_flow_imp.id(9700000000000023)
+,p_list_item_display_sequence=>30
+,p_list_item_link_text=>'Audit History'
+,p_list_item_link_target=>'f?p=&APP_ID.:4:&SESSION.::&DEBUG.::::'
+,p_list_item_icon=>'fa-database-lock'
+,p_list_item_current_type=>'TARGET_PAGE'
+);
 end;
 /
 prompt --application/shared_components/navigation/lists/navigation_bar
@@ -1605,6 +1613,252 @@ wwv_flow_imp_page.create_report_columns(
 ,p_column_heading=>'% Complete'
 ,p_column_alignment=>'RIGHT'
 ,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+end;
+/
+prompt --application/pages/page_00004
+begin
+wwv_flow_imp_page.create_page(
+ p_id=>4
+,p_name=>'Audit History'
+,p_alias=>'AUDIT-HISTORY'
+,p_step_title=>'Audit History'
+,p_autocomplete_on_off=>'OFF'
+,p_page_template_options=>'#DEFAULT#'
+,p_required_role=>wwv_flow_imp.id(9700000000000051)
+,p_protection_level=>'C'
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000000460)
+,p_name=>'P4_AUDIT_HISTORY'
+,p_title=>'Audit History'
+,p_template=>4072358936313175081
+,p_display_sequence=>10
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select cy.cycle_name,',
+'       cy.status as cycle_status,',
+'       ri.review_item_id,',
+'       ri.user_name,',
+'       ri.employee_number,',
+'       ri.responsibility,',
+'       ri.application,',
+'       ri.start_date,',
+'       ri.end_date,',
+'       ri.approval,',
+'       ri.approver,',
+'       ri.approval_date,',
+'       ri.last_logon,',
+'       ri.comments,',
+'       uwem.manager_first_name,',
+'       uwem.manager_last_name,',
+'       uwem.manager_id,',
+'       b.email_address as manager_email',
+'from xxcti_uar_review_items ri',
+'join xxcti_uar_review_cycles cy',
+'  on ri.cycle_id = cy.cycle_id',
+'join xxcti_uar_workday_employee_mgr uwem',
+'  on ri.employee_number = to_char(uwem.employee_id)',
+'left join xxcti_uar_workday_employee_mgr b',
+'  on uwem.manager_id = b.employee_id',
+'order by cy.period_start desc, ri.approval_date desc'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>50
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No audit history yet.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>10000
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_csv_output=>'Y'
+,p_csv_output_link_text=>'Download'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000461)
+,p_query_column_id=>1
+,p_column_alias=>'CYCLE_NAME'
+,p_column_display_sequence=>1
+,p_column_heading=>'Cycle'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000462)
+,p_query_column_id=>2
+,p_column_alias=>'CYCLE_STATUS'
+,p_column_display_sequence=>2
+,p_column_heading=>'Cycle Status'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000463)
+,p_query_column_id=>3
+,p_column_alias=>'REVIEW_ITEM_ID'
+,p_column_display_sequence=>3
+,p_column_heading=>'Review Item Id'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000464)
+,p_query_column_id=>4
+,p_column_alias=>'USER_NAME'
+,p_column_display_sequence=>4
+,p_column_heading=>'User Name'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000465)
+,p_query_column_id=>5
+,p_column_alias=>'EMPLOYEE_NUMBER'
+,p_column_display_sequence=>5
+,p_column_heading=>'Employee Number'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000466)
+,p_query_column_id=>6
+,p_column_alias=>'RESPONSIBILITY'
+,p_column_display_sequence=>6
+,p_column_heading=>'Responsibility'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000467)
+,p_query_column_id=>7
+,p_column_alias=>'APPLICATION'
+,p_column_display_sequence=>7
+,p_column_heading=>'Application'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000468)
+,p_query_column_id=>8
+,p_column_alias=>'START_DATE'
+,p_column_display_sequence=>8
+,p_column_heading=>'Start Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000469)
+,p_query_column_id=>9
+,p_column_alias=>'END_DATE'
+,p_column_display_sequence=>9
+,p_column_heading=>'End Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000470)
+,p_query_column_id=>10
+,p_column_alias=>'APPROVAL'
+,p_column_display_sequence=>10
+,p_column_heading=>'Approval'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000471)
+,p_query_column_id=>11
+,p_column_alias=>'APPROVER'
+,p_column_display_sequence=>11
+,p_column_heading=>'Approver'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000472)
+,p_query_column_id=>12
+,p_column_alias=>'APPROVAL_DATE'
+,p_column_display_sequence=>12
+,p_column_heading=>'Approval Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000473)
+,p_query_column_id=>13
+,p_column_alias=>'LAST_LOGON'
+,p_column_display_sequence=>13
+,p_column_heading=>'Last Logon'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000474)
+,p_query_column_id=>14
+,p_column_alias=>'COMMENTS'
+,p_column_display_sequence=>14
+,p_column_heading=>'Comments'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000475)
+,p_query_column_id=>15
+,p_column_alias=>'MANAGER_FIRST_NAME'
+,p_column_display_sequence=>15
+,p_column_heading=>'Manager First Name'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000476)
+,p_query_column_id=>16
+,p_column_alias=>'MANAGER_LAST_NAME'
+,p_column_display_sequence=>16
+,p_column_heading=>'Manager Last Name'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000477)
+,p_query_column_id=>17
+,p_column_alias=>'MANAGER_ID'
+,p_column_display_sequence=>17
+,p_column_heading=>'Manager Id'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000478)
+,p_query_column_id=>18
+,p_column_alias=>'MANAGER_EMAIL'
+,p_column_display_sequence=>18
+,p_column_heading=>'Manager Email'
+,p_heading_alignment=>'LEFT'
 ,p_derived_column=>'N'
 ,p_include_in_export=>'Y'
 );

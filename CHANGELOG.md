@@ -176,6 +176,20 @@ parameter entirely rather than guess again at the right one. The real protection
 everyone now, and non-admins get rejected by the page itself if they click it, which is
 normal APEX behavior, not a gap.
 
+## Stage 3 — Page 4 (Audit History admin page)
+
+Cross-cycle historical report, same `create_report_region`/`create_report_columns` Classic
+Report pattern as Page 3 (and the original app's own Audit History page) — join
+`xxcti_uar_review_items` to `xxcti_uar_review_cycles` and `xxcti_uar_workday_employee_mgr`
+(twice, for employee and manager) to show every review item across every cycle, including
+the new `COMMENTS` column (denial rationale) the original never had. Same `p_required_role`
+Administration Rights gate as Page 3, and a nav menu link added the same (unguarded) way as
+Page 3's — learned from the Stage 2 `p_security_scheme` mistake not to repeat it.
+
+This completes the originally-scoped rebuild stages (Pages 1–4). Remaining items are the
+deferred cosmetic/UX pieces noted throughout this file: nav-hiding by role, a DEV/TEST/PROD
+env badge, confirm() dialogs, a progress-bar region on Page 1, and a "Close Cycle" button.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
