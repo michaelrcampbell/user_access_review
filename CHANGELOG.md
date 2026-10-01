@@ -319,16 +319,24 @@ Every PL/SQL block touched in this batch was mechanically quote-counted (even co
 line) before committing, consistent with the discipline established after the `\"`
 escaping mistake earlier.
 
-## Page 3 field width fix attempt (2026-10-01)
+## Page 3 field width — actual root cause, found in PMO Hub's real file (2026-10-01)
 
-`p_cSize=>20` alone didn't actually narrow the fields visually — Universal Theme's CSS
-generally overrides the legacy HTML `size` attribute, stretching form fields to fill their
-container. Added `:t-Form-fieldContainer--small` to `p_item_template_options` on the 5
-affected items (cycle name, period start/end, due date, and the close/delete cycle-id
-field). Moderate confidence, not certain: the original app's own `P1_MANAGER` item uses a
-confirmed real template-option class, `t-Form-fieldContainer--large`, and `--small` is a
-reasonable same-naming-pattern inference from that, but `--small` itself isn't independently
-confirmed anywhere yet — flagged to the user as such, pending retest.
+The `:t-Form-fieldContainer--small` guess (previous section) didn't fix it. User asked to
+check how PMO Hub actually handles field width — reading `04_pmo_hub_apex.sql` directly
+(not guessing) showed the real cause: PMO Hub's multi-field forms (e.g. its "Project
+Request" region) use `p_plug_template=>0` (the plain default region template), not the
+Hero template. This app's "Open New Cycle", "Close or Delete a Cycle", and "Add or Remove
+Admin" regions were all built on the Hero template (`2674017834225413037`) — which is
+specifically designed to stretch/bold its contents, so no item-level attribute could have
+fixed it; the width was coming from the region template itself. The original app 104 only
+ever used Hero for a single prominent selector (`P1_MANAGER_SELECTION`) and a title-display
+region (`P2_EMPLOYEE_REVIEW`) — both left as Hero here, unaffected — never for a multi-field
+form, which is the case that was actually broken.
+
+Reverted the `--small` guess back to plain `'#DEFAULT#'` on the 5 items, and changed the
+three multi-field form regions' `p_plug_template` from `2674017834225413037` to `0`,
+dropping the now-irrelevant `t-HeroRegion--noPadding` region template option alongside it.
+This is a confirmed fix pulled from a real working file, not an inference this time.
 
 ## Constraint driving the Import-wizard requirement
 

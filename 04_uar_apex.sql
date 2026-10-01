@@ -1447,8 +1447,8 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_name=>'P3_OPEN_NEW_CYCLE'
 ,p_title=>'Open New Cycle'
 ,p_icon_css_classes=>'fa-lg fa-calendar-plus-o'
-,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
-,p_plug_template=>2674017834225413037
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>0
 ,p_plug_display_sequence=>10
 ,p_location=>null
 );
@@ -1462,7 +1462,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_cSize=>20
 ,p_cMaxlength=>120
 ,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--small'
+,p_item_template_options=>'#DEFAULT#'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'trim_spaces', 'BOTH')).to_clob
 );
@@ -1475,7 +1475,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
 ,p_cSize=>20
 ,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--small'
+,p_item_template_options=>'#DEFAULT#'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000403)
@@ -1486,7 +1486,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
 ,p_cSize=>20
 ,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--small'
+,p_item_template_options=>'#DEFAULT#'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000404)
@@ -1497,7 +1497,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_display_as=>'NATIVE_DATE_PICKER_APEX'
 ,p_cSize=>20
 ,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--small'
+,p_item_template_options=>'#DEFAULT#'
 );
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000405)
@@ -1540,8 +1540,8 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_name=>'P3_MANAGE_EXISTING_CYCLE'
 ,p_title=>'Close or Delete a Cycle'
 ,p_icon_css_classes=>'fa-lg fa-cogs'
-,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
-,p_plug_template=>2674017834225413037
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>0
 ,p_plug_display_sequence=>20
 ,p_location=>null
 );
@@ -1554,7 +1554,7 @@ wwv_flow_imp_page.create_page_item(
 ,p_display_as=>'NATIVE_TEXT_FIELD'
 ,p_cSize=>20
 ,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--small'
+,p_item_template_options=>'#DEFAULT#'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'trim_spaces', 'BOTH')).to_clob
 );
@@ -2115,8 +2115,8 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_name=>'P7_ADD_REMOVE_ADMIN'
 ,p_title=>'Add or Remove Admin'
 ,p_icon_css_classes=>'fa-lg fa-user-plus'
-,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
-,p_plug_template=>2674017834225413037
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>0
 ,p_plug_display_sequence=>10
 ,p_location=>null
 );
