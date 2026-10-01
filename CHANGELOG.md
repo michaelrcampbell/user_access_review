@@ -319,6 +319,17 @@ Every PL/SQL block touched in this batch was mechanically quote-counted (even co
 line) before committing, consistent with the discipline established after the `\"`
 escaping mistake earlier.
 
+## Page 3 field width fix attempt (2026-10-01)
+
+`p_cSize=>20` alone didn't actually narrow the fields visually — Universal Theme's CSS
+generally overrides the legacy HTML `size` attribute, stretching form fields to fill their
+container. Added `:t-Form-fieldContainer--small` to `p_item_template_options` on the 5
+affected items (cycle name, period start/end, due date, and the close/delete cycle-id
+field). Moderate confidence, not certain: the original app's own `P1_MANAGER` item uses a
+confirmed real template-option class, `t-Form-fieldContainer--large`, and `--small` is a
+reasonable same-naming-pattern inference from that, but `--small` itself isn't independently
+confirmed anywhere yet — flagged to the user as such, pending retest.
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
