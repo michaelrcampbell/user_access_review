@@ -190,6 +190,24 @@ This completes the originally-scoped rebuild stages (Pages 1–4). Remaining ite
 deferred cosmetic/UX pieces noted throughout this file: nav-hiding by role, a DEV/TEST/PROD
 env badge, confirm() dialogs, a progress-bar region on Page 1, and a "Close Cycle" button.
 
+## Backlog items — progress indicator + Close Cycle (2026-10-01)
+
+- **Progress indicator on Page 1**: a small Classic Report region (`P1_PROGRESS`, one row)
+  against `xxcti_uar_cycle_progress`, same proven pattern as every other report in this
+  file — total items, completed items, pct complete for the current manager+cycle.
+- **Close Cycle**, as its own Page 5 rather than a second button on Page 3: a text item
+  defaulting to the current open cycle (via the same `BEFORE_HEADER` default-and-check
+  pattern already used on Pages 1/2), one button, one process calling
+  `xxcti_uar_cycle_pkg.close_cycle`, plus a read-only cycles list for context. Deliberately
+  its own page instead of a second button on Page 3, specifically to avoid needing an
+  unproven "which button triggered this submit" conditional-process pattern — every page in
+  this file so far has exactly one button per page for that reason.
+
+Still deferred, need a genuinely new (unproven in this file) mechanism each: nav-hiding
+Pages 3/4/5 by role and a DEV/TEST/PROD env badge (both need a `NATIVE_PLSQL` dynamic-content
+region, zero precedent here), and confirm() dialogs (need a Dynamic Action, zero precedent
+here either).
+
 ## Constraint driving the Import-wizard requirement
 
 SQL Scripts works reliably for testing but has a file-size ceiling — PMO Hub's export is a
