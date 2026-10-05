@@ -681,3 +681,18 @@ Methodology note: when no available reference file has a genuinely confirmed-wor
 of the specific thing being debugged, the fastest path is to build a minimal throwaway
 example directly in Page Designer and export it fresh, rather than keep inferring from
 older/adjacent exports that may not actually prove the behavior in question.
+
+## P4 Audit History: search by user or manager name (2026-10-05)
+
+Added a search box so an admin can find records by employee (Oracle user name) or manager
+name without scrolling/paginating through the full cross-cycle history. Used the same
+proven patterns already established in this file rather than introducing a new region type
+(Interactive Report) with no precedent anywhere in this app: a plain `NATIVE_TEXT_FIELD`
+item + `SUBMIT` button (same shape as P3/P7's forms), and the report's existing SQL source
+extended with an optional `WHERE` clause matching the bind variable against either
+`ri.user_name` or the joined manager's concatenated name -- `:P4_SEARCH_TEXT is null` keeps
+showing everything when the box is empty, same optional-filter idiom already proven on P1's
+reports (`:P1_CYCLE_ID`/`:P1_MANAGER` bind-variable filtering). `submit_when_enter_pressed`
+on the item lets Enter trigger the search without requiring a Search-button click. Also
+applied the now-standard scoped field-width CSS region to this page for visual consistency
+with P3/P7.

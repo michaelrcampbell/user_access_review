@@ -2030,6 +2030,55 @@ wwv_flow_imp_page.create_page(
 ,p_required_role=>wwv_flow_imp.id(9700000000000051)
 ,p_protection_level=>'C'
 );
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000489)
+,p_plug_name=>'P4_FIELD_WIDTH_CSS'
+,p_plug_display_sequence=>3
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
+'htp.p(''.t-Form-fieldContainer select'');',
+'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000490)
+,p_plug_name=>'P4_SEARCH'
+,p_title=>'Search'
+,p_icon_css_classes=>'fa-lg fa-search'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>5
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000491)
+,p_name=>'P4_SEARCH_TEXT'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000490)
+,p_prompt=>'User or Manager Name'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>30
+,p_cMaxlength=>200
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'submit_when_enter_pressed', 'Y',
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000492)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000490)
+,p_button_name=>'SEARCH'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Search'
+,p_button_position=>'CREATE'
+);
 wwv_flow_imp_page.create_report_region(
  p_id=>wwv_flow_imp.id(9700000000000460)
 ,p_name=>'P4_AUDIT_HISTORY'
@@ -2066,6 +2115,9 @@ wwv_flow_imp_page.create_report_region(
 '  on ri.employee_number = to_char(uwem.employee_id)',
 'left join xxcti_uar_workday_employee_mgr b',
 '  on uwem.manager_id = b.employee_id',
+'where :P4_SEARCH_TEXT is null',
+'   or upper(ri.user_name) like upper(''%''||:P4_SEARCH_TEXT||''%'')',
+'   or upper(uwem.manager_first_name || '' '' || uwem.manager_last_name) like upper(''%''||:P4_SEARCH_TEXT||''%'')',
 'order by cy.period_start desc, ri.approval_date desc'))
 ,p_ajax_enabled=>'Y'
 ,p_lazy_loading=>false
