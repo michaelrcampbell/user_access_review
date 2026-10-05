@@ -498,3 +498,40 @@ Deliberately not done this pass (to avoid scope creep / over-engineering): RAG-s
 coding of completion %, progress-bar visualization on P1, and required-field flags on the
 open-cycle items (the validation in #3 covers the real need without the import-400 param
 risk). The README is also stale (still describes "Stage 0") -- flagged, not rewritten here.
+
+## Correction: the dialogbtnr "Buttons" region fix was wrong -- real fix found (2026-10-05)
+
+User reimported and reported Page 3 still missing buttons, fields still oversized -- the
+previous fix (separate "Buttons" sibling region on `plug_template=>2126429139436695430` at
+`REGION_POSITION_03`) did not work.
+
+Root cause of that failure: `2126429139436695430` is this theme's own
+`p_default_dialogbtnr_template` (confirmed from this file's own `create_theme` call) --
+Universal Theme's **dialog/drawer button bar**, not a general-purpose button container.
+Checked where PMO Hub actually uses that id: every single occurrence is on a page that sets
+`p_step_template` plus a `js-dialog-class-t-Drawer--pullOutEnd` CSS option (confirmed on
+Project Edit, P26) -- i.e. a modal drawer page, a fundamentally different page type from P3/P7
+(plain nav-list content pages, no step template override). PMO Hub has no example of this
+pattern on a regular page because **every** create/edit form in that app is a drawer (KT
+S5.2) -- there was no valid precedent to copy in the first place, and the apparent match was
+coincidental.
+
+Real fix: this file's own `create_theme` call already declares
+`p_default_form_template=>4072358936313175081` as the application's default form template --
+the theme's own designated template for exactly this case (a region holding items + buttons
+on a normal page), and the same id already renders correctly throughout this file on every
+report region (`p_template=>4072358936313175081` on P1/P3/P7's report regions). Changed
+P3_OPEN_NEW_CYCLE, P3_MANAGE_EXISTING_CYCLE, and P7_ADD_REMOVE_ADMIN from
+`plug_template=>0` to `4072358936313175081`, dropped the unprecedented
+`p_plug_source_type=>'NATIVE_FORM'` (no valid precedent for a non-automatic-DML custom-process
+region either -- PMO's NATIVE_FORM regions are all automatic-DML drawer forms, a different
+mechanism from this app's manual `:REQUEST`-guarded processes), removed the three stray
+"Buttons" sibling regions entirely, and re-pointed every button's `p_button_plug_id` back to
+its own field region (positions CREATE/DELETE left as-is -- those are generic APEX button
+position constants, not specific to the dialog button bar).
+
+Methodology note: comparing against PMO Hub found a pattern that looked right but came from
+an unrelated page *type* (modal vs. regular) -- surface-level similarity in an export file
+isn't the same as confirming the two pages are actually the same kind of thing. The id that
+actually resolved it was sitting in this app's own `create_theme` call the whole time,
+labeled for exactly this purpose.

@@ -1481,18 +1481,9 @@ wwv_flow_imp_page.create_page_plug(
 ,p_title=>'Open New Cycle'
 ,p_icon_css_classes=>'fa-lg fa-calendar-plus-o'
 ,p_region_template_options=>'#DEFAULT#'
-,p_plug_template=>0
+,p_plug_template=>4072358936313175081
 ,p_plug_display_sequence=>10
 ,p_location=>null
-,p_plug_source_type=>'NATIVE_FORM'
-);
-wwv_flow_imp_page.create_page_plug(
- p_id=>wwv_flow_imp.id(9700000000000406)
-,p_plug_name=>'Buttons'
-,p_plug_template=>2126429139436695430
-,p_plug_display_sequence=>15
-,p_plug_display_point=>'REGION_POSITION_03'
-,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000401)
@@ -1544,7 +1535,7 @@ wwv_flow_imp_page.create_page_item(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000405)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000406)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000400)
 ,p_button_name=>'OPEN_CYCLE'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
@@ -1594,18 +1585,9 @@ wwv_flow_imp_page.create_page_plug(
 ,p_title=>'Close or Delete a Cycle'
 ,p_icon_css_classes=>'fa-lg fa-cogs'
 ,p_region_template_options=>'#DEFAULT#'
-,p_plug_template=>0
+,p_plug_template=>4072358936313175081
 ,p_plug_display_sequence=>20
 ,p_location=>null
-,p_plug_source_type=>'NATIVE_FORM'
-);
-wwv_flow_imp_page.create_page_plug(
- p_id=>wwv_flow_imp.id(9700000000000457)
-,p_plug_name=>'Buttons'
-,p_plug_template=>2126429139436695430
-,p_plug_display_sequence=>25
-,p_plug_display_point=>'REGION_POSITION_03'
-,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000451)
@@ -1640,7 +1622,7 @@ wwv_flow_imp_page.create_page_process(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000453)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
 ,p_button_name=>'CLOSE_CYCLE'
 ,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
@@ -1652,7 +1634,7 @@ wwv_flow_imp_page.create_page_button(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000454)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
 ,p_button_name=>'DELETE_CYCLE'
 ,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
@@ -2218,18 +2200,9 @@ wwv_flow_imp_page.create_page_plug(
 ,p_title=>'Add or Remove Admin'
 ,p_icon_css_classes=>'fa-lg fa-user-plus'
 ,p_region_template_options=>'#DEFAULT#'
-,p_plug_template=>0
+,p_plug_template=>4072358936313175081
 ,p_plug_display_sequence=>10
 ,p_location=>null
-,p_plug_source_type=>'NATIVE_FORM'
-);
-wwv_flow_imp_page.create_page_plug(
- p_id=>wwv_flow_imp.id(9700000000000804)
-,p_plug_name=>'Buttons'
-,p_plug_template=>2126429139436695430
-,p_plug_display_sequence=>15
-,p_plug_display_point=>'REGION_POSITION_03'
-,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000801)
@@ -2248,7 +2221,7 @@ wwv_flow_imp_page.create_page_item(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000802)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000804)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
 ,p_button_name=>'ADD_ADMIN'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
@@ -2260,7 +2233,7 @@ wwv_flow_imp_page.create_page_button(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000803)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000804)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
 ,p_button_name=>'REMOVE_ADMIN'
 ,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
