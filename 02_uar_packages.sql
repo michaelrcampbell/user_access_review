@@ -271,6 +271,30 @@ end;
 show errors
 
 -- ----------------------------------------------------------------------------
+-- Write-path authorization. The page-load gates on Page 2 do not cover saves:
+-- the Interactive Grid updates rows by primary key, so every update must be
+-- checked here, at the table, whatever channel it arrives through. Admin
+-- maintenance outside an APEX session is blocked too; use a privileged
+-- correction script with this trigger disabled, and say so in the change log.
+-- ----------------------------------------------------------------------------
+create or replace trigger xxcti_uar_review_items_auth
+    before update on xxcti_uar_review_items
+    for each row
+begin
+    if xxcti_uar_cycle_pkg.can_edit_cycle(:old.cycle_id) = 'N' then
+        raise_application_error(-20020,
+            'This review cycle is closed; its items can no longer be changed.');
+    end if;
+
+    if xxcti_uar_security_pkg.can_review(:old.employee_number) = 'N' then
+        raise_application_error(-20021,
+            'You are not authorized to review this employee.');
+    end if;
+end;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
 -- Standalone smoke tests -- run after seeding xxcti_uar_admins in
 -- 01_uar_schema_ddl.sql, before touching APEX at all.
 -- ----------------------------------------------------------------------------

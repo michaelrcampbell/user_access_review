@@ -546,7 +546,9 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_type=>'NATIVE_PLSQL'
 ,p_process_name=>'Initialize Page Defaults'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'if :P1_MANAGER is null then',
+'if xxcti_uar_security_pkg.is_admin = ''N'' then',
+'   :P1_MANAGER := xxcti_uar_security_pkg.resolve_employee_id;',
+'elsif :P1_MANAGER is null then',
 '   :P1_MANAGER := xxcti_uar_security_pkg.resolve_employee_id;',
 'end if;',
 ':P1_CYCLE_ID := xxcti_uar_cycle_pkg.current_open_cycle;'))
