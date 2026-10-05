@@ -719,3 +719,32 @@ when a cycle is deliberately deleted, keeping the existing cleanup symmetric.
 No UI changes in this pass -- the history is queryable but not yet surfaced anywhere (e.g.
 a P4 drill-down). Deliberately scoped to just the backend mechanism per the user's request;
 a UI view can be added separately if wanted.
+
+## P4 Audit History: converted to a true Interactive Report, matching PMO Hub's P20 (2026-10-05)
+
+User asked for P4 to work like PMO Hub's P20 (Projects) -- filterable/sortable columns with
+per-column value selection, read-only. That's PMO Hub's `NATIVE_IR` (Interactive Report)
+pattern, a region type this app had never used before (P1/P2 use `NATIVE_IG`, P3/P4/P7 used
+plain `NATIVE_SQL_REPORT`). Copied PMO Hub's real, confirmed-working P20 definition exactly
+rather than guessing at IR's parameter surface: `create_page_plug` with
+`p_plug_source_type=>'NATIVE_IR'` on the IRR region template (`2100526641005906379`, already
+used elsewhere in this app for IG regions too), followed by `create_worksheet` (implicit
+context from the preceding plug, no explicit region-id parameter -- same implicit-context
+convention already used by this app's own `create_report_columns` calls), one
+`create_worksheet_column` per column (18 total, each needing a unique single-letter
+`p_column_identifier` A-R), and `create_worksheet_rpt` as the default (`p_is_default=>'Y'`)
+saved report.
+
+Per the already-known IR gotcha (project memory: a column missing from the default saved
+report's `p_report_columns` list silently doesn't render, independent of
+`create_worksheet_column`), mechanically cross-checked that all 18 `p_db_column_name` values
+appear in `p_report_columns` and that all 18 `p_column_identifier` letters are unique before
+committing.
+
+This also **removed** last session's custom P4_SEARCH text box/button and its WHERE-clause
+bind filter -- redundant now that Interactive Report provides a built-in global search bar
+(covers "find by user or manager" more completely than the custom box did) plus per-column
+filter/sort/show-distinct-values out of the box, exactly matching P20's actual design (which
+has no custom search box either). IR is inherently read-only unless explicitly configured
+for inline editing, which this isn't -- satisfies "obviously it shouldn't be editable" with
+no extra configuration needed.
