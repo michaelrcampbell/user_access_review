@@ -648,3 +648,36 @@ load -- directly addresses the "can the user just start working, does Save need 
 first" question from this session, and should also surface the row-selector checkboxes if
 they were conditionally hidden outside edit mode. (P1's read-only grid has the same parameter
 at `p_edit_mode=>false` -- left alone, correct there since that grid is never editable.)
+
+## Row-selector checkboxes: real root cause found via a live Page-Designer export (2026-10-05)
+
+Dead end after dead end on this (edit_mode, ig_report_column wiring) because neither
+available reference file (f104, this app's own history) had a genuinely confirmed-working
+example to diff against. User added a throwaway Page 5 directly in Page Designer on the real
+app, built a standard editable IG on it, confirmed its checkboxes render, and exported it
+fresh (`f530.sql`) -- real, current, ground-truth precedent instead of an old export or
+another guess.
+
+Diffing that page's `APEX$ROW_SELECTOR`/`APEX$ROW_ACTION` region columns against ours found
+the actual cause: both of ours carried `p_required_patch=>wwv_flow_imp.id(9700000000000060)`
+-- pointing at this app's own "Commented Out" build option (status `EXCLUDE`). `p_required_patch`
+is meant to reference an internal APEX patch-compatibility record, not a build option; this
+was carried over from the original f104 export without ever pointing it at anything real.
+The fresh Page-Designer export has **zero** occurrences of `p_required_patch` anywhere.
+Whatever APEX does with an unresolvable/excluded reference there, the effect was the same as
+silently skipping the column's creation -- no error, just never renders, matching the exact
+symptom chased across three prior attempts.
+
+Also confirmed from the same working export: the row selector is **never** listed in
+`create_ig_report_column` even in a page that renders checkboxes correctly -- that part of
+the earlier fix (adding one) was chasing the wrong lever the whole time and has been removed
+again. The control-column shape is otherwise the same as `APEX$ROW_ACTION`'s: no
+`p_session_state_data_type`, no `p_use_as_row_header`; instead `p_enable_hide=>true` and
+`p_is_primary_key=>false`. Rewrote both `APEX$ROW_ACTION` and `APEX$ROW_SELECTOR` to match
+the confirmed-working shape exactly (also added `APEX$ROW_ACTION`'s missing `p_label=>'Actions'`
+/ alignment attributes, present in the real export but absent from ours).
+
+Methodology note: when no available reference file has a genuinely confirmed-working example
+of the specific thing being debugged, the fastest path is to build a minimal throwaway
+example directly in Page Designer and export it fresh, rather than keep inferring from
+older/adjacent exports that may not actually prove the behavior in question.
