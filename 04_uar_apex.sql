@@ -1476,6 +1476,18 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000399)
+,p_plug_name=>'P3_FIELD_WIDTH_CSS'
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
+'htp.p(''.t-Form-fieldContainer select'');',
+'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000400)
 ,p_plug_name=>'P3_OPEN_NEW_CYCLE'
 ,p_title=>'Open New Cycle'
@@ -2193,6 +2205,18 @@ wwv_flow_imp_page.create_page(
 ,p_page_template_options=>'#DEFAULT#'
 ,p_required_role=>wwv_flow_imp.id(9700000000000051)
 ,p_protection_level=>'C'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000799)
+,p_plug_name=>'P7_FIELD_WIDTH_CSS'
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
+'htp.p(''.t-Form-fieldContainer select'');',
+'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000800)

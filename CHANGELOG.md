@@ -535,3 +535,20 @@ an unrelated page *type* (modal vs. regular) -- surface-level similarity in an e
 isn't the same as confirming the two pages are actually the same kind of thing. The id that
 actually resolved it was sitting in this app's own `create_theme` call the whole time,
 labeled for exactly this purpose.
+
+## Page 3/7 field width -- actually narrow now, via scoped CSS (2026-10-05)
+
+Buttons confirmed working after the template fix, but fields still spanned the full page
+width. Checked whether PMO Hub's narrow "Project Edit" fields come from a reusable CSS class
+(grepped for `t-Form-fieldContainer--`, `u-maxWidth`, `max-width` across the whole PMO Hub
+file) -- none exists. PMO Hub's forms look narrow because they render inside a drawer (a
+~400-500px sliding panel per KT S5.2), not because of any per-field width setting. P3/P7 are
+plain full-width content pages, not drawers, so there's no equivalent mechanism to copy --
+this app genuinely needs its own width constraint that PMO Hub never had to solve.
+
+Used the one CSS-injection technique already proven working in this exact file (Global
+Page's role-based nav-hiding, `NATIVE_PLSQL` region + `htp.p('<style>...')`) rather than
+inventing a new mechanism: added a small CSS-only region at the top of Page 3 and Page 7
+(sequence 5, before the form regions) capping `.t-Form-fieldContainer input`/`select` to
+400px. Scoped per-page since that's where the actual `.t-Form-fieldContainer` elements are
+(the report regions on the same pages don't use that class, so no risk of over-scoping).
