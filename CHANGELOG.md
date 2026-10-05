@@ -418,3 +418,40 @@ never meaningful given the page already auto-resolves a default.
 Methodology note: comparing against the two other real, working apps (not just inferring
 from this app's own data) found the actual cause in one pass, after two rounds of
 live-debugging + guessing had each produced a plausible-but-insufficient fix.
+
+## Page 3 buttons missing entirely, fields rendering blank/full-width (2026-10-05)
+
+After the P1 dropdown fix, screenshot showed Page 3's "Open New Cycle" fields rendering as
+bare full-width bars with no visible input chrome, and no buttons at all anywhere on the
+page (not "too wide" this time -- missing outright).
+
+Compared this app's `plug_template=>0` regions against every `plug_template=>0` region in
+PMO Hub rather than guessing at more template/attribute tweaks. Found a consistent pattern
+used for every single form region in PMO Hub, with no exceptions: the form-fields region
+(`plug_template=>0`) always has `p_plug_source_type=>'NATIVE_FORM'` set, and its buttons are
+never attached directly to it -- they live in a separate sibling region using
+`plug_template=>2126429139436695430` (the Buttons container template) at
+`p_plug_display_point=>'REGION_POSITION_03'`, with `p_button_position` values like `CREATE`/
+`CANCEL`/`DELETE`, never `NEXT`.
+
+This app had neither: `p_plug_source_type` was unset on the fields regions, and buttons were
+attached directly to the same `plug_template=>0` region with `p_button_position=>'NEXT'` --
+a combination with no precedent anywhere in either working app. `plug_template=>0` has no
+button slot of its own, which explains the missing buttons; the missing `NATIVE_FORM` source
+type explains the bare/unstyled field rendering.
+
+Fixed on all three affected regions (P3 "Open New Cycle", P3 "Close or Delete a Cycle", and
+P7 "Add or Remove Admin" -- the last wasn't yet visually tested but had the identical
+anti-pattern, fixed proactively):
+- Added `p_plug_source_type=>'NATIVE_FORM'` to each fields region.
+- Added a new sibling "Buttons" region per form (ids 406, 457, 804), using the precedented
+  template/display-point combination.
+- Re-pointed each button's `p_button_plug_id` to its new Buttons region, and changed
+  `p_button_position` from `NEXT` to `CREATE` (primary action) or `DELETE` (destructive
+  action), matching PMO Hub's precedent exactly rather than inventing new position values.
+
+Methodology note: this is the second bug in a row resolved by diffing against PMO Hub's
+actual working pattern end-to-end instead of iterating on this app's own template/attribute
+values -- see the P1 dropdown entry above and [[feedback_apex_research_before_guessing]] in
+project memory. Comparison-first is now the default approach for any APEX rendering bug in
+this project, not just JS crashes.

@@ -1452,6 +1452,15 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_template=>0
 ,p_plug_display_sequence=>10
 ,p_location=>null
+,p_plug_source_type=>'NATIVE_FORM'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000406)
+,p_plug_name=>'Buttons'
+,p_plug_template=>2126429139436695430
+,p_plug_display_sequence=>15
+,p_plug_display_point=>'REGION_POSITION_03'
+,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000401)
@@ -1503,14 +1512,14 @@ wwv_flow_imp_page.create_page_item(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000405)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000400)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000406)
 ,p_button_name=>'OPEN_CYCLE'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_is_hot=>'Y'
 ,p_button_image_alt=>'Open Cycle'
-,p_button_position=>'NEXT'
+,p_button_position=>'CREATE'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000410)
@@ -1545,6 +1554,15 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_template=>0
 ,p_plug_display_sequence=>20
 ,p_location=>null
+,p_plug_source_type=>'NATIVE_FORM'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000457)
+,p_plug_name=>'Buttons'
+,p_plug_template=>2126429139436695430
+,p_plug_display_sequence=>25
+,p_plug_display_point=>'REGION_POSITION_03'
+,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000451)
@@ -1575,25 +1593,25 @@ wwv_flow_imp_page.create_page_process(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000453)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
 ,p_button_name=>'CLOSE_CYCLE'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_is_hot=>'Y'
 ,p_button_image_alt=>'Close Cycle'
-,p_button_position=>'NEXT'
+,p_button_position=>'CREATE'
 );
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000454)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
 ,p_button_name=>'DELETE_CYCLE'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_image_alt=>'Delete Cycle (permanent -- no undo)'
-,p_button_position=>'NEXT'
+,p_button_position=>'DELETE'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000455)
@@ -2120,6 +2138,15 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_template=>0
 ,p_plug_display_sequence=>10
 ,p_location=>null
+,p_plug_source_type=>'NATIVE_FORM'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000804)
+,p_plug_name=>'Buttons'
+,p_plug_template=>2126429139436695430
+,p_plug_display_sequence=>15
+,p_plug_display_point=>'REGION_POSITION_03'
+,p_plug_source_type=>'NATIVE_FORM'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000801)
@@ -2138,25 +2165,25 @@ wwv_flow_imp_page.create_page_item(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000802)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000804)
 ,p_button_name=>'ADD_ADMIN'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_is_hot=>'Y'
 ,p_button_image_alt=>'Add Admin'
-,p_button_position=>'NEXT'
+,p_button_position=>'CREATE'
 );
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000803)
 ,p_button_sequence=>20
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000800)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000804)
 ,p_button_name=>'REMOVE_ADMIN'
 ,p_button_action=>'SUBMIT'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_image_alt=>'Remove Admin'
-,p_button_position=>'NEXT'
+,p_button_position=>'DELETE'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000810)
