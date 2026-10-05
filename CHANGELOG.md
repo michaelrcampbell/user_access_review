@@ -596,3 +596,23 @@ working in this exact file instead:
 The underlying `P1_MANAGER` item and its BEFORE_HEADER default (`resolve_employee_id`) are
 untouched -- non-admins still get correctly scoped to their own reports via the existing
 bind variable, they just never see or interact with the (redundant, for them) dropdown UI.
+
+## P1 cycle due-date / days-remaining banner (2026-10-05)
+
+Added a due-date and days-remaining indicator to P1, for all users (admin and non-admin
+alike), showing the current open cycle's due date plus a color-coded count of days left.
+Bands confirmed with the user (their original wording had an overlapping range): >50% of
+the cycle's total days remaining = green, 25-50% = yellow, <25% = red; a due date already
+passed always shows red as "N day(s) past due" rather than a nonsensical negative count.
+
+"Total days" is `due_date - created_date` (the cycle's whole open-to-due window), not
+`period_end - period_start` (which is the audit period being reviewed, a different date
+range entirely -- using it would make the countdown math meaningless). New
+`NATIVE_PLSQL` region (`P1_CYCLE_DUE_INFO`, sequence 7, right after the existing
+greeting/instructions regions), same proven conditional-`htp.p` pattern as those. Renders
+nothing when there's no open cycle.
+
+Colors are PMO Hub's own documented RAG palette (`KNOWLEDGE_TRANSFER.md` S5.2: green
+`#1A7C4F`, amber `#E6A817`, red `#C00000`) rather than inventing new ones -- `#E6A817`
+was already in use in this app's own environment badge, so this keeps the palette
+consistent across both apps.

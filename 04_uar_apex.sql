@@ -446,6 +446,58 @@ wwv_flow_imp_page.create_page_plug(
 'end if;'))
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000232)
+,p_plug_name=>'P1_CYCLE_DUE_INFO'
+,p_plug_display_sequence=>7
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_due_date    date;',
+'   l_created     date;',
+'   l_total_days  number;',
+'   l_days_left   number;',
+'   l_pct         number;',
+'   l_color       varchar2(10);',
+'   l_label       varchar2(100);',
+'begin',
+'   if :P1_CYCLE_ID is not null then',
+'      begin',
+'         select due_date, created_date',
+'           into l_due_date, l_created',
+'           from xxcti_uar_review_cycles',
+'          where cycle_id = :P1_CYCLE_ID;',
+'      exception when no_data_found then',
+'         l_due_date := null;',
+'      end;',
+'',
+'      if l_due_date is not null then',
+'         l_total_days := greatest(trunc(l_due_date) - trunc(l_created), 1);',
+'         l_days_left  := trunc(l_due_date) - trunc(sysdate);',
+'         l_pct        := (l_days_left / l_total_days) * 100;',
+'',
+'         if l_days_left < 0 then',
+'            l_color := ''#C00000'';',
+'            l_label := abs(l_days_left) || '' day(s) past due'';',
+'         elsif l_pct < 25 then',
+'            l_color := ''#C00000'';',
+'            l_label := l_days_left || '' day(s) remaining'';',
+'         elsif l_pct <= 50 then',
+'            l_color := ''#E6A817'';',
+'            l_label := l_days_left || '' day(s) remaining'';',
+'         else',
+'            l_color := ''#1A7C4F'';',
+'            l_label := l_days_left || '' day(s) remaining'';',
+'         end if;',
+'',
+'         htp.p(''<div class="uar-due-banner" style="margin:0 0 16px;font-size:1rem;">'');',
+'         htp.p(''Current review cycle due: <strong>'' || to_char(l_due_date,''Mon DD, YYYY'') || ''</strong>'');',
+'         htp.p('' &mdash; <strong style="color:'' || l_color || '';">'' || l_label || ''</strong>'');',
+'         htp.p(''</div>'');',
+'      end if;',
+'   end if;',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000210)
 ,p_plug_name=>'P1_MANAGER_SELECTION'
 ,p_title=>'Manager Selection'
