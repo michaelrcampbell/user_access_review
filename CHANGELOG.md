@@ -455,3 +455,46 @@ actual working pattern end-to-end instead of iterating on this app's own templat
 values -- see the P1 dropdown entry above and [[feedback_apex_research_before_guessing]] in
 project memory. Comparison-first is now the default approach for any APEX rendering bug in
 this project, not just JS crashes.
+
+## PMO Hub review pass -- proactive UX/functional improvements (2026-10-05)
+
+Reviewed PMO Hub's KNOWLEDGE_TRANSFER.md and `04_pmo_hub_apex.sql` end-to-end and applied
+four improvements to UAR, each from proven PMO Hub precedent or pure PL/SQL (no unprecedented
+export parameters -- per the standing import-400 rule). All quote-doubling verified
+mechanically (whole-file odd-single-quote scan came back clean) and all new component ids
+confirmed unique with correct cross-references before committing.
+
+1. **Confirmation dialogs on destructive actions.** Delete Cycle (P3), Close Cycle (P3), and
+   Remove Admin (P7) previously fired instantly on click with no guard -- Delete Cycle in
+   particular permanently removes a cycle and every review item in it. Converted all three
+   buttons from `p_button_action=>'SUBMIT'` to `'DEFINED_BY_DA'` with a backing
+   click-event + `NATIVE_JAVASCRIPT_CODE` action running `if(confirm(...)){apex.submit(...)}`,
+   exactly the pattern PMO Hub uses for all 8 of its delete buttons (KT S7.3). The
+   `apex.submit("<REQUEST>")` call preserves each existing `:REQUEST`-guarded process, so no
+   process logic changed.
+
+2. **Cycle picker instead of a raw id text box (P3).** `P3_ACTION_CYCLE_ID` (used by Close
+   and Delete) was a free-text field -- the admin typed a cycle id number by hand, directly
+   feeding a permanent-delete. Changed it to a `NATIVE_SELECT_LIST` of cycles
+   (`cycle_name (status)`, value = cycle_id, newest first) with a "- Select a cycle -" null
+   prompt. The existing BEFORE_HEADER default still preselects the current open cycle.
+   Removes the fat-finger-wrong-id-then-delete hazard; select-list + LOV + null-text are all
+   precedented (PMO Hub P31_DEPARTMENT, and P1_MANAGER here).
+
+3. **Friendly validation on Open New Cycle (P3).** Added null checks (name + all three dates
+   required) and a period-end-not-before-start check to the Open New Cycle process, raising
+   clear `-20010`/`-20011` messages instead of letting a blank submit fall through to an
+   opaque `ORA-01400`/bad data. Pure PL/SQL inside the existing process body -- no new export
+   param, no import risk (KT S8.5's concern was specifically about adding `p_is_required` to
+   the item, which this avoids).
+
+4. **Personalized greeting on P1.** Added a `NATIVE_PLSQL` greeting region at the top of My
+   Team Review (PMO Hub KT S7.1): server-rendered "Hello, <first name>!" fallback, rewritten
+   client-side to a time-of-day greeting using the browser clock, first name resolved from
+   `xxcti_uar_workday_employee_mgr` by email (falls back to `:APP_USER`), name run through
+   `apex_escape.html`.
+
+Deliberately not done this pass (to avoid scope creep / over-engineering): RAG-style color
+coding of completion %, progress-bar visualization on P1, and required-field flags on the
+open-cycle items (the validation in #3 covers the real need without the import-400 param
+risk). The README is also stale (still describes "Stage 0") -- flagged, not rewritten here.

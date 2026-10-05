@@ -397,6 +397,38 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000230)
+,p_plug_name=>'P1_GREETING'
+,p_plug_template=>0
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_first varchar2(200);',
+'begin',
+'   begin',
+'      select employee_legal_first_name into l_first',
+'      from xxcti_uar_workday_employee_mgr',
+'      where upper(email_address) = upper(:APP_USER)',
+'        and rownum = 1;',
+'   exception when no_data_found then',
+'      l_first := :APP_USER;',
+'   end;',
+'   l_first := nvl(l_first, :APP_USER);',
+'   htp.p(''<style>.uar-greeting{font-size:1.1rem;font-weight:600;color:#2E75B6;margin:4px 0 10px;}</style>'');',
+'   htp.p(''<div id="uar-greeting" class="uar-greeting" data-name="'' || apex_escape.html(l_first) || ''">Hello, '' || apex_escape.html(l_first) || ''!</div>'');',
+'   htp.p(''<script>'');',
+'   htp.p(''(function(){'');',
+'   htp.p(''var el=document.getElementById("uar-greeting");'');',
+'   htp.p(''if(!el)return;'');',
+'   htp.p(''var h=new Date().getHours();'');',
+'   htp.p(''var g=h<12?"Good Morning":(h<18?"Good Afternoon":"Good Evening");'');',
+'   htp.p(''el.textContent=g+", "+el.dataset.name+"!";'');',
+'   htp.p(''})();'');',
+'   htp.p(''</script>'');',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000210)
 ,p_plug_name=>'P1_MANAGER_SELECTION'
 ,p_title=>'Manager Selection'
@@ -1532,6 +1564,17 @@ wwv_flow_imp_page.create_page_process(
 '   l_cycle_id number;',
 'begin',
 '   if :REQUEST = ''OPEN_CYCLE'' then',
+'      if :P3_NEW_CYCLE_NAME is null',
+'         or :P3_NEW_PERIOD_START is null',
+'         or :P3_NEW_PERIOD_END is null',
+'         or :P3_NEW_DUE_DATE is null then',
+'         raise_application_error(-20010,',
+'            ''Cycle name, period start, period end, and due date are all required.'');',
+'      end if;',
+'      if to_date(:P3_NEW_PERIOD_END, ''YYYY-MM-DD'') < to_date(:P3_NEW_PERIOD_START, ''YYYY-MM-DD'') then',
+'         raise_application_error(-20011,',
+'            ''Period end cannot be earlier than period start.'');',
+'      end if;',
 '      xxcti_uar_cycle_pkg.open_cycle(',
 '         p_cycle_name   => :P3_NEW_CYCLE_NAME,',
 '         p_period_start => to_date(:P3_NEW_PERIOD_START, ''YYYY-MM-DD''),',
@@ -1569,13 +1612,17 @@ wwv_flow_imp_page.create_page_item(
 ,p_name=>'P3_ACTION_CYCLE_ID'
 ,p_item_sequence=>10
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000450)
-,p_prompt=>'Cycle Id'
-,p_display_as=>'NATIVE_TEXT_FIELD'
-,p_cSize=>20
+,p_prompt=>'Cycle'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select cycle_name || '' ('' || status || '')'' as d,',
+'       cycle_id as r',
+'from xxcti_uar_review_cycles',
+'order by period_start desc'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select a cycle -'
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#'
-,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
-  'trim_spaces', 'BOTH')).to_clob
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000452)
@@ -1595,7 +1642,7 @@ wwv_flow_imp_page.create_page_button(
 ,p_button_sequence=>10
 ,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
 ,p_button_name=>'CLOSE_CYCLE'
-,p_button_action=>'SUBMIT'
+,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_is_hot=>'Y'
@@ -1607,11 +1654,47 @@ wwv_flow_imp_page.create_page_button(
 ,p_button_sequence=>20
 ,p_button_plug_id=>wwv_flow_imp.id(9700000000000457)
 ,p_button_name=>'DELETE_CYCLE'
-,p_button_action=>'SUBMIT'
+,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_image_alt=>'Delete Cycle (permanent -- no undo)'
 ,p_button_position=>'DELETE'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000000458)
+,p_name=>'Confirm Close Cycle'
+,p_event_sequence=>10
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_imp.id(9700000000000453)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000459)
+,p_event_id=>wwv_flow_imp.id(9700000000000458)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'if(confirm("Close this cycle? Managers will no longer be able to edit their reviews for it.")){apex.submit("CLOSE_CYCLE");}'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000000480)
+,p_name=>'Confirm Delete Cycle'
+,p_event_sequence=>20
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_imp.id(9700000000000454)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000481)
+,p_event_id=>wwv_flow_imp.id(9700000000000480)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'if(confirm("Delete this cycle and ALL of its review items? This is permanent and cannot be undone.")){apex.submit("DELETE_CYCLE");}'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000455)
@@ -2179,11 +2262,29 @@ wwv_flow_imp_page.create_page_button(
 ,p_button_sequence=>20
 ,p_button_plug_id=>wwv_flow_imp.id(9700000000000804)
 ,p_button_name=>'REMOVE_ADMIN'
-,p_button_action=>'SUBMIT'
+,p_button_action=>'DEFINED_BY_DA'
 ,p_button_template_options=>'#DEFAULT#'
 ,p_button_template_id=>4072362960822175091
 ,p_button_image_alt=>'Remove Admin'
 ,p_button_position=>'DELETE'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000000805)
+,p_name=>'Confirm Remove Admin'
+,p_event_sequence=>10
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_imp.id(9700000000000803)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000806)
+,p_event_id=>wwv_flow_imp.id(9700000000000805)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'if(confirm("Remove admin access for this email address?")){apex.submit("REMOVE_ADMIN");}'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000810)
