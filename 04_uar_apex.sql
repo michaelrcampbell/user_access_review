@@ -1396,7 +1396,7 @@ wwv_flow_imp_page.create_ig_report_view(
 ,p_view_type=>'GRID'
 ,p_srv_exclude_null_values=>false
 ,p_srv_only_display_columns=>true
-,p_edit_mode=>true
+,p_edit_mode=>false
 );
 wwv_flow_imp_page.create_ig_report_column(
  p_id=>wwv_flow_imp.id(9700000000000350)
