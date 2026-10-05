@@ -552,3 +552,20 @@ inventing a new mechanism: added a small CSS-only region at the top of Page 3 an
 (sequence 5, before the form regions) capping `.t-Form-fieldContainer input`/`select` to
 400px. Scoped per-page since that's where the actual `.t-Form-fieldContainer` elements are
 (the report regions on the same pages don't use that class, so no risk of over-scoping).
+
+## Open New Cycle: ORA-01843 invalid month (2026-10-05)
+
+Opening a cycle threw `ORA-01843: An invalid month was specified` from the `to_date()` calls
+added in the earlier validation pass -- `to_date(:P3_NEW_PERIOD_START, 'YYYY-MM-DD')` assumed
+the NATIVE_DATE_PICKER_APEX item stores its session-state value as ISO text, which it doesn't.
+
+Checked PMO Hub rather than guessing a different mask: its Milestone Entry page (P24) has the
+identical item shape (`NATIVE_DATE_PICKER_APEX`, same template, no format attribute) and its
+Save process binds `due_dt=:P24_DUE_DT`/`actual_dt=:P24_ACTUAL_DT` directly into the DML with
+**no** `to_date()` wrapper at all anywhere in the app -- it relies entirely on implicit
+conversion against the session's NLS date format rather than a hardcoded mask.
+
+Fixed by dropping the explicit `'YYYY-MM-DD'` mask from all three `to_date()` calls (the two
+feeding `xxcti_uar_cycle_pkg.open_cycle`'s DATE parameters, plus the period-end-before-start
+comparison), leaving bare `to_date(:ITEM)` so each falls back to the session format the same
+way PMO Hub's proven pattern does.
