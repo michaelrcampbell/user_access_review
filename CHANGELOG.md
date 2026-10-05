@@ -616,3 +616,20 @@ Colors are PMO Hub's own documented RAG palette (`KNOWLEDGE_TRANSFER.md` S5.2: g
 `#1A7C4F`, amber `#E6A817`, red `#C00000`) rather than inventing new ones -- `#E6A817`
 was already in use in this app's own environment badge, so this keeps the palette
 consistent across both apps.
+
+## P2 grid: row-selector checkboxes were defined but never wired in (2026-10-05)
+
+User reported no checkboxes on P2's editable grid, needed for the built-in multi-row bulk
+edit feature. Root cause: `APEX$ROW_SELECTOR` (column id 334, `enable_multi_select=>'Y'`)
+was defined via `create_region_column` back when the grid was first built, but never added
+to the grid's actual visible column set via `create_ig_report_column` -- only
+`APEX$ROW_ACTION` (333) got that second step. A region column that exists in metadata but
+was never attached to a `create_ig_report_column` entry simply never renders -- same shape
+of bug as the earlier IR-column gotcha in project memory, one layer removed (grid report
+view, not a classic IR saved report).
+
+Added the missing `create_ig_report_column` entry (id 363, `p_display_seq=>-1` so checkboxes
+render leftmost of the row-action icon). With this in place, APEX's native "apply to
+selected rows" cell-edit feature should now be available: select multiple rows via the new
+checkboxes, edit the Approval dropdown on one of them, and APEX should prompt to apply that
+value to all selected rows -- built-in Interactive Grid behavior, no custom code needed.

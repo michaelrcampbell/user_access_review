@@ -1502,6 +1502,14 @@ wwv_flow_imp_page.create_ig_report_column(
 ,p_is_visible=>true
 ,p_is_frozen=>false
 );
+wwv_flow_imp_page.create_ig_report_column(
+ p_id=>wwv_flow_imp.id(9700000000000363)
+,p_view_id=>wwv_flow_imp.id(9700000000000342)
+,p_display_seq=>-1
+,p_column_id=>wwv_flow_imp.id(9700000000000334)
+,p_is_visible=>true
+,p_is_frozen=>false
+);
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000380)
 ,p_button_sequence=>10
