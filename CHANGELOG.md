@@ -345,3 +345,38 @@ real example of a file too large for it. As this app grows through later stages 
 any static files/icons added back), it will likely exceed that ceiling too, at which point
 App Builder → Import becomes the only viable way to install it. Getting Import to accept
 this file isn't just today's problem — it has to keep working as the file grows.
+
+## P1 manager dropdown JS crash — root cause found via live browser debugging (2026-10-05)
+
+Opening the P1_MANAGER search-select dropdown threw `Uncaught Error: Invalid choice object,
+r property missing` from `desktop_all.min.js`'s `searchChoices`. Ruled out by direct testing
+before guessing further: null/blank LOV rows (none), duplicate `manager_id` with differing
+name text from the admin-visible-managers GROUP BY (none), and the newly added Dynamic
+Action (error fires on dropdown *open*, before any `change` event could reach the DA's
+listener).
+
+Traced live in Chrome DevTools (pause-on-exceptions breakpoint at the actual throw site,
+then read the real minified source around it):
+
+```js
+if (!h.r)
+    throw new Error("Invalid choice object, r property missing");
+```
+
+`h.r` is checked for truthiness, not just presence. The item's `min_chars=>'0'` attribute
+makes the search-select run a search immediately on open, with an empty term — and that
+search path chokes on APEX's auto-inserted "- Select -" null/placeholder choice, whose
+`r` value is legitimately `''` (empty string, hence falsy). This is a widget behavior gap,
+not a data problem in the LOV query.
+
+Fix: added `p_lov_display_null=>'NO'` to P1_MANAGER's `create_page_item` call, suppressing
+the placeholder entry entirely — functionally harmless since the page's "Initialize Page
+Defaults" process already auto-resolves `P1_MANAGER` when null. Confirmed `'YES'`/`'NO'`
+(string) is the correct form for this parameter on `create_page_item` via PMO Hub precedent
+(`04_pmo_hub_apex.sql:4765`); a `true` (boolean) precedent exists elsewhere in this file but
+only on `create_region_column`, a different API, so it wasn't valid precedent here.
+
+Methodology note: this is the first bug in this project resolved by debugging live in the
+browser (DevTools pause-on-exceptions + reading the real un-minified-equivalent source
+around the throw) rather than by inferring from SQL/export data alone — worth defaulting to
+earlier next time a thrown JS error names a specific library function.

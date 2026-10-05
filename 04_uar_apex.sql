@@ -420,6 +420,7 @@ wwv_flow_imp_page.create_page_item(
 '   or manager_id = xxcti_uar_security_pkg.resolve_employee_id',
 'group by manager_id, manager_first_name, manager_last_name',
 'order by 1'))
+,p_lov_display_null=>'NO'
 ,p_cSize=>30
 ,p_field_template=>1609121967514267634
 ,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--large:t-Form-fieldContainer--boldDisplay'
