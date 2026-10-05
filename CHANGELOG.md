@@ -696,3 +696,26 @@ reports (`:P1_CYCLE_ID`/`:P1_MANAGER` bind-variable filtering). `submit_when_ent
 on the item lets Enter trigger the search without requiring a Search-button click. Also
 applied the now-standard scoped field-width CSS region to this page for visual consistency
 with P3/P7.
+
+## Approval change history -- preserve prior decisions, not just the latest (2026-10-05)
+
+User raised a real gap: the existing `xxcti_uar_review_items_biu` trigger stamps
+APPROVER/APPROVAL_DATE on every approval change, but only the *current* value is kept --
+if a manager approves an item, saves, then later (within the same still-open cycle) changes
+their mind and denies it, the fact it was ever approved, by whom, and when is silently
+overwritten with zero trace. For a tool whose purpose is a defensible compliance record,
+that's a real gap, not a nice-to-have.
+
+Added `xxcti_uar_review_items_history` (`01_uar_schema_ddl.sql`): one row per prior
+approval state (old approval/approver/approval_date/comments, plus who/when made the
+change), keyed to `review_item_id` with a proper FK -- standard "shadow audit table"
+pattern, not DML the app writes to directly. Extended the existing trigger
+(`02_uar_packages.sql`) to insert the `:old` row's state into this table before applying
+each approval change, using the same `WHEN` condition it already had (fires on every
+approval change, including the first NULL-to-decision transition, for a complete history).
+`xxcti_uar_cycle_pkg.delete_cycle` updated to purge history rows alongside review items
+when a cycle is deliberately deleted, keeping the existing cleanup symmetric.
+
+No UI changes in this pass -- the history is queryable but not yet surfaced anywhere (e.g.
+a P4 drill-down). Deliberately scoped to just the backend mechanism per the user's request;
+a UI view can be added separately if wanted.

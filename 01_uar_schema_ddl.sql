@@ -83,6 +83,40 @@ comment on table xxcti_uar_review_items is
   || 'time the cycle opened. This is the table Page 2 edits.';
 
 -- ----------------------------------------------------------------------------
+-- 2b. Review item history -- captures the prior approval state whenever a
+--     review item's approval changes, so a manager revising their own
+--     earlier decision (approve then later deny, or vice versa) before the
+--     cycle closes doesn't silently erase the original decision and its
+--     approver/date. Written by xxcti_uar_review_items_biu
+--     (02_uar_packages.sql) before each approval change; the app never
+--     writes to this table directly.
+-- ----------------------------------------------------------------------------
+create sequence xxcti_uar_review_items_hist_seq start with 1 increment by 1;
+
+create table xxcti_uar_review_items_history (
+    history_id        number        not null,
+    review_item_id    number        not null,
+    cycle_id          number        not null,
+    employee_number   varchar2(30),
+    old_approval      varchar2(20),
+    old_approver      varchar2(240),
+    old_approval_date date,
+    old_comments      varchar2(4000),
+    changed_by        varchar2(240) default sys_context('APEX$SESSION','APP_USER'),
+    changed_date      date          default sysdate not null,
+    constraint xxcti_uar_review_items_hist_pk primary key (history_id),
+    constraint xxcti_uar_review_items_hist_fk foreign key (review_item_id)
+        references xxcti_uar_review_items (review_item_id)
+);
+
+create index xxcti_uar_review_items_hist_ix on xxcti_uar_review_items_history (review_item_id);
+
+comment on table xxcti_uar_review_items_history is
+  'One row per prior approval state, written just before xxcti_uar_review_items.approval '
+  || 'changes -- preserves the earlier approver/date/comments that would otherwise be '
+  || 'silently overwritten if a manager revises their own decision before the cycle closes.';
+
+-- ----------------------------------------------------------------------------
 -- 3. Admin allow-list (carried over from the phase-1 security patch)
 -- ----------------------------------------------------------------------------
 create table xxcti_uar_admins (

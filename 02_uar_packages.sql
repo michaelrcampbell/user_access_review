@@ -228,6 +228,10 @@ create or replace package body xxcti_uar_cycle_pkg as
 
     procedure delete_cycle(p_cycle_id in number) is
     begin
+        delete from xxcti_uar_review_items_history
+         where review_item_id in (
+            select review_item_id from xxcti_uar_review_items where cycle_id = p_cycle_id
+         );
         delete from xxcti_uar_review_items where cycle_id = p_cycle_id;
         delete from xxcti_uar_review_cycles where cycle_id = p_cycle_id;
         commit;
@@ -241,13 +245,25 @@ show errors
 -- Audit-trail stamping. APPROVER/APPROVAL_DATE were never populated by
 -- anything in the original MVP -- this closes that gap at the table level so
 -- it holds regardless of how the update arrives (Page 2's IG, a future API,
--- a script).
+-- a script). Also writes the prior approval state to
+-- xxcti_uar_review_items_history before overwriting it -- otherwise a
+-- manager revising their own earlier decision (approve then later deny, or
+-- vice versa) before the cycle closes would silently erase the original
+-- decision with no trace.
 -- ----------------------------------------------------------------------------
 create or replace trigger xxcti_uar_review_items_biu
     before update on xxcti_uar_review_items
     for each row
     when (nvl(new.approval, 'x') != nvl(old.approval, 'x'))
 begin
+    insert into xxcti_uar_review_items_history (
+        history_id, review_item_id, cycle_id, employee_number,
+        old_approval, old_approver, old_approval_date, old_comments
+    ) values (
+        xxcti_uar_review_items_hist_seq.nextval, :old.review_item_id, :old.cycle_id, :old.employee_number,
+        :old.approval, :old.approver, :old.approval_date, :old.comments
+    );
+
     :new.approver      := coalesce(sys_context('APEX$SESSION','APP_USER'), user);
     :new.approval_date := sysdate;
 end;

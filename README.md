@@ -72,7 +72,10 @@ workaround until SMTP exists. The cycle model doesn't need to change to add that
   check that was missing entirely (a manager could previously browse and approve/deny
   any employee's access review by URL, not just their own reports).
 - **Audit-trail stamping** — `APPROVER`/`APPROVAL_DATE` are now set by a trigger, closing
-  a gap where nothing in the MVP ever populated them.
+  a gap where nothing in the MVP ever populated them. A prior-state history table
+  (`xxcti_uar_review_items_history`) also preserves each earlier decision whenever a
+  manager revises their own approval before the cycle closes — the MVP had no concept of
+  this at all, and even this rebuild's own first pass only kept the latest decision.
 - **Progress visibility** — a completion percentage per manager per cycle
   (`xxcti_uar_cycle_progress`), surfaced on both the manager's own landing page and the
   admin dashboard; the MVP had no way to see "how much is left" at either level.
