@@ -633,3 +633,18 @@ render leftmost of the row-action icon). With this in place, APEX's native "appl
 selected rows" cell-edit feature should now be available: select multiple rows via the new
 checkboxes, edit the Approval dropdown on one of them, and APEX should prompt to apply that
 value to all selected rows -- built-in Interactive Grid behavior, no custom code needed.
+
+## P2 grid: start in edit mode, not view-then-click-Edit (2026-10-05)
+
+Screenshot showed a separate toolbar "Edit" button the user had to click before any cell
+became editable, plus confirmed the row-selector checkboxes from the previous fix still
+weren't visible -- likely because Interactive Grid only shows bulk-edit row-selection
+checkboxes while actually in edit mode, not in the default read-only view.
+
+Root cause of both: `p_edit_mode=>false` on P2's grid view (set when the grid was first
+built), which makes an editable IG load in read-only display mode until the user explicitly
+clicks "Edit." Changed to `p_edit_mode=>true` so the grid is immediately editable on page
+load -- directly addresses the "can the user just start working, does Save need an Edit step
+first" question from this session, and should also surface the row-selector checkboxes if
+they were conditionally hidden outside edit mode. (P1's read-only grid has the same parameter
+at `p_edit_mode=>false` -- left alone, correct there since that grid is never editable.)
