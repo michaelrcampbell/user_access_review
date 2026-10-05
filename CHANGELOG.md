@@ -380,3 +380,41 @@ Methodology note: this is the first bug in this project resolved by debugging li
 browser (DevTools pause-on-exceptions + reading the real un-minified-equivalent source
 around the throw) rather than by inferring from SQL/export data alone — worth defaulting to
 earlier next time a thrown JS error names a specific library function.
+
+## P1 manager dropdown crash — correction: the null-entry fix was insufficient, real cause is scale (2026-10-05)
+
+The `p_lov_display_null=>'NO'` fix (previous entry) did not resolve the crash on reimport/retest.
+Stopped guessing further and instead did a structural comparison across all three available
+apps (`f104.sql` — the original, still-working UAR app; `PMO_Hub/04_pmo_hub_apex.sql`; and
+this rebuild), rather than more live-debugging iterations:
+
+- PMO Hub has no search-select item anywhere (no `min_chars` attribute at all) and no
+  Interactive Grid regions — not a useful comparable for this widget.
+- `f104.sql` has the **exact same** P1_MANAGER item (same attributes, same field template,
+  same item template options) coexisting with an Interactive Grid named `P1_EMPLOYEES` on
+  the same page (`f104.sql:1281`) — proving IG-coexistence and this item's attribute set
+  are not inherently broken. Ruled out as a cause.
+- The one real structural difference: `f104.sql`'s LOV read from a small, purpose-built
+  `apps.xxcti_uar_managers` table (dropped in this rebuild per `01_uar_schema_ddl.sql`'s own
+  design note, in favor of deriving managers via `GROUP BY` over the per-employee table).
+  That was fine at the scale of "one manager's own row," but the "admins see all managers"
+  feature widened it to 343 rows company-wide — a scale F104 never exercised. Every test so
+  far had been run as an admin (added to `xxcti_uar_admins` earlier in the build), so the
+  small-list path was never actually exercised either.
+
+Combined with the earlier live-debugged finding that the throw happens inside a search
+triggered immediately on open (because `min_chars=>'0'` searches with an empty term right
+away): `fetch_on_search=>'N'` + `min_chars=>'0'` is the correct, proven configuration for a
+small, fully client-side list (matching the original's small dedicated table) — it is the
+wrong mode now that the list can be 343 rows. APEX's search-select item has a documented
+server-side mode for exactly this: `fetch_on_search=>'Y'` with `min_chars` above 0, which
+fetches matching choices via AJAX as the user types instead of shipping/auto-searching the
+full list client-side. Changed P1_MANAGER's attributes from
+`fetch_on_search=>'N', min_chars=>'0'` to `fetch_on_search=>'Y', min_chars=>'2'`. This also
+makes the earlier null-entry fix moot for this symptom (the problematic eager empty-term
+search no longer runs on open at all) but it's left in place since showing "- Select -" was
+never meaningful given the page already auto-resolves a default.
+
+Methodology note: comparing against the two other real, working apps (not just inferring
+from this app's own data) found the actual cause in one pass, after two rounds of
+live-debugging + guessing had each produced a plausible-but-insufficient fix.

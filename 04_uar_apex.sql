@@ -426,9 +426,9 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--large:t-Form-fieldContainer--boldDisplay'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'case_sensitive', 'N',
-  'fetch_on_search', 'N',
+  'fetch_on_search', 'Y',
   'match_type', 'CONTAINS',
-  'min_chars', '0')).to_clob
+  'min_chars', '2')).to_clob
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000201)
