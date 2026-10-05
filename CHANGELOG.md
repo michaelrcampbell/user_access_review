@@ -569,3 +569,30 @@ Fixed by dropping the explicit `'YYYY-MM-DD'` mask from all three `to_date()` ca
 feeding `xxcti_uar_cycle_pkg.open_cycle`'s DATE parameters, plus the period-end-before-start
 comparison), leaving bare `to_date(:ITEM)` so each falls back to the session format the same
 way PMO Hub's proven pattern does.
+
+## P1 manager dropdown: admin-only, instructional text for regular users (2026-10-05)
+
+User feedback: a regular (non-admin) user should only ever see their own direct reports --
+the manager-select dropdown doesn't make sense for them (it already only returns their own
+row from the LOV, so it was a dropdown with one fixed option). Only admins need it, to review
+other managers' employees/troubleshoot. Requested replacing that section with instructions
+for everyone else.
+
+No region- or item-level visibility condition parameter has any precedent anywhere in this
+file or PMO Hub (`p_condition_type` has zero hits in either) -- adding one blind would risk
+the standing unprecedented-param import-400 gotcha. Used the two techniques already proven
+working in this exact file instead:
+
+- CSS-hide the whole "Manager Selection" Hero region for non-admins via the same `:has()`
+  selector technique the Global Page's nav-hiding already uses successfully --
+  `.t-HeroRegion:has(.fa-check-square-o){display:none!important}` (the icon class is unique
+  to this region's own Hero wrapper; the only other place it's reused is a side-nav `<li>`,
+  which doesn't carry `.t-HeroRegion` so there's no collision risk).
+- A new conditional `NATIVE_PLSQL` region (`P1_MANAGER_VISIBILITY`, sequence 6, right after
+  the greeting) that emits that CSS plus a plain-language instructions block, only when
+  `xxcti_uar_security_pkg.is_admin = 'N'` -- same conditional-`htp.p` pattern as the
+  environment badge.
+
+The underlying `P1_MANAGER` item and its BEFORE_HEADER default (`resolve_employee_id`) are
+untouched -- non-admins still get correctly scoped to their own reports via the existing
+bind variable, they just never see or interact with the (redundant, for them) dropdown UI.

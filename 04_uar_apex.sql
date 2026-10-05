@@ -429,6 +429,23 @@ wwv_flow_imp_page.create_page_plug(
 'end;'))
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000231)
+,p_plug_name=>'P1_MANAGER_VISIBILITY'
+,p_plug_display_sequence=>6
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if xxcti_uar_security_pkg.is_admin = ''N'' then',
+'   htp.p(''<style>.t-HeroRegion:has(.fa-check-square-o){display:none!important}</style>'');',
+'   htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'   htp.p(''<strong>How to complete your review:</strong> Below is the list of employees '');',
+'   htp.p(''currently assigned to you. For each access item, review the responsibility and '');',
+'   htp.p(''application listed, then mark it <strong>Approved</strong> or <strong>Denied</strong>. '');',
+'   htp.p(''Add a comment if you deny an item or need to explain your decision, then save your '');',
+'   htp.p(''changes before the due date for this review cycle.'');',
+'   htp.p(''</div>'');',
+'end if;'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000210)
 ,p_plug_name=>'P1_MANAGER_SELECTION'
 ,p_title=>'Manager Selection'
