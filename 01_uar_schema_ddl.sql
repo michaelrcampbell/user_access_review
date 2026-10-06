@@ -71,7 +71,9 @@ create table xxcti_uar_review_items (
     constraint xxcti_uar_review_items_cycle_fk foreign key (cycle_id)
         references xxcti_uar_review_cycles (cycle_id),
     constraint xxcti_uar_review_items_appr_ck
-        check (approval in ('Approved','Denied') or approval is null)
+        check (approval in ('Approved','Denied') or approval is null),
+    constraint xxcti_uar_review_items_denial_ck
+        check (approval <> 'Denied' or trim(comments) is not null)
 );
 
 create index xxcti_uar_review_items_cyc_ix on xxcti_uar_review_items (cycle_id);
