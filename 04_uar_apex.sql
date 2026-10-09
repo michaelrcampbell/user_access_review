@@ -1390,7 +1390,7 @@ wwv_flow_imp_page.create_ig_report_column(
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000380)
 ,p_button_sequence=>10
-,p_button_plug_id=>wwv_flow_imp.id(9700000000000300)
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000320)
 ,p_button_name=>'P2_BACK_BUTTON'
 ,p_button_action=>'REDIRECT_PAGE'
 ,p_button_template_options=>'#DEFAULT#:t-Button--iconLeft'

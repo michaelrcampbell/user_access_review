@@ -877,3 +877,19 @@ Mechanically verified before committing: every new/changed component id resolves
 with no dangling references, the Manager Completion IR's `p_report_columns` list matches its
 8 worksheet columns exactly, and quote-doubling checked whole-file across both changed SQL
 files.
+
+## P2 back button: wrong region id, found by diffing against the real original (2026-10-09)
+
+Item 1 from the last batch said "already present" based on reading our own file -- the
+button existed, but existing isn't the same as rendering. User reported it doesn't show.
+
+Diffed our button against `f104.sql`'s actual button line by line rather than trusting
+memory of "this was copied from the original": ours has `p_button_plug_id` pointing at
+`P2_EMPLOYEE_REVIEW` (the Hero-template region) -- the real original attaches it to
+`P2_RESPONSIBILITY` (the IG/IRR-template region) instead, confirmed at `f104.sql:2266`
+(`p_button_plug_id=>wwv_flow_imp.id(9658844932781608)`, which is `P2_RESPONSIBILITY`'s own
+id at `f104.sql:1733`, not `P2_EMPLOYEE_REVIEW`'s). Every other attribute on the button
+already matched the original exactly; only the plug id was wrong, apparently copied
+incorrectly when this file was first hand-authored. Fixed to point at our own
+`P2_RESPONSIBILITY` plug (`9700000000000320`) instead of `P2_EMPLOYEE_REVIEW`
+(`9700000000000300`).
