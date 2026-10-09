@@ -923,3 +923,13 @@ both the `create_region_column` definitions and the one `create_ig_report_column
 entry that made `ROW_ACTION` visible (`ROW_SELECTOR` was never wired into the view, per the
 earlier `p_required_patch` finding -- nothing to remove there beyond its own definition).
 Simplifies the grid back down to just the data columns.
+
+## P2: restored the row-selector checkbox, actions menu stays removed (2026-10-09)
+
+Previous commit removed both system columns; user clarified only the "..." actions menu
+(`APEX$ROW_ACTION`) was the unwanted clutter -- the bulk-edit checkbox column
+(`APEX$ROW_SELECTOR`) should stay, given the effort to get it rendering correctly earlier
+this project (the `p_required_patch` fix). Restored its `create_region_column` definition
+(id `9700000000000334`, unchanged shape) -- no `create_ig_report_column` wiring needed, per
+the earlier confirmed finding that this column renders from its region-column definition
+alone.
