@@ -124,3 +124,19 @@ Carried over from PMO Hub's history, all confirmed real:
   the DML silently rolls back.
 - When hand-editing already-escaped export text, verify quote-doubling mechanically, not
   by eye.
+
+## Deployment discipline
+
+- **Export before import.** An import replaces the whole app. Take a fresh export of the
+  currently-deployed app from the target workspace before importing a new version, so
+  there's something to restore from if the import goes wrong. Not yet automated here —
+  a manual step before each DEV import.
+- **ID convention.** New hand-authored component ids in `04_uar_apex.sql` use the
+  `9700000000000xxx` prefix (distinct from the original app 104's and PMO Hub's own id
+  ranges, so the three never collide if ever compared side by side). Before adding a new
+  id, grep the file to confirm it's unused — every id added this way so far has been
+  verified unique and cross-reference-checked before committing; keep doing that.
+- **Script size.** `04_uar_apex.sql` is currently about 90 KB and imports cleanly through
+  SQL Workshop → SQL Scripts. PMO Hub's export (about 796 KB) was too large for SQL
+  Scripts on this instance. If this file approaches the high hundreds of KB, switch to
+  App Builder → Import instead of waiting for a size error.
