@@ -820,3 +820,60 @@ cross-reference resolves, and quote-doubling checked whole-file across all three
 files.
 
 **Untested -- branch is for review before merging.**
+
+## Six usability fixes from user review (2026-10-09)
+
+1. **P2 back button** -- already existed (`P2_BACK_BUTTON`, confirmed working in an earlier
+   test session), no change made. Flagged to the user in case it's not actually appearing,
+   rather than silently skipping the request.
+
+2. **P1 manager dropdown removed; moved to P3.** The dropdown only ever mattered for admins
+   browsing another manager's team -- redundant UI for a regular user checking their own
+   team. Removed the Hero region, the `P1_MANAGER` select-list item (now `NATIVE_HIDDEN`,
+   still `value_protected`, same as `P1_CYCLE_ID`), and the now-dead "manager changed ->
+   refresh" dynamic action. `P1_MANAGER_VISIBILITY` (the CSS-hide-the-dropdown-for-non-admins
+   region) is now just `P1_INSTRUCTIONS` -- same message, shown unconditionally, since there's
+   no dropdown left to hide. The `BEFORE_HEADER` default logic (non-admin always forced to
+   their own manager id) is unchanged -- still the thing preventing URL tampering, just no
+   longer paired with a visible control.
+
+3. **No region just for a button.** `P1_SUBMIT_REVIEW` existed only to hold the hidden
+   `P1_CAN_SUBMIT` item and the Submit button. Reviewed PMO Hub's button placement per the
+   user's request: P20's "Create Project" button attaches directly to the same Interactive
+   Report region it acts on (`p_button_plug_id` = the IR's own plug id), not a separate
+   region. Moved the item and button onto `P1_PROGRESS` (same proven form template,
+   `4072358936313175081`) and deleted the standalone region.
+
+4 & 2 (combined). **Manager Completion converted to an Interactive Report, with the manager
+   picker now living there as a link.** Rather than add a separate dropdown+button region to
+   P3 (redundant with the report already listing every manager), the manager-name column is
+   now a link built the same way P1's and P4's employee/row links are --
+   `apex_page.get_url(p_page=>1, p_items=>'P1_MANAGER', ...)` in the SQL source, feeding a
+   hidden `MANAGER_URL` worksheet column referenced from `MANAGER_NAME`'s HTML expression.
+   Clicking a manager's name on P3 opens Page 1 scoped to that manager's team -- the exact
+   functionality the old dropdown provided, positioned where an admin is already looking at
+   each manager's completion status. The report itself gets Interactive Report's native
+   sort/filter/search for free, satisfying "find a manager" directly; "find ... employee" is
+   satisfied one click away, by the already-Interactive-Report employee list on P1 that
+   clicking through lands on.
+
+5. **Reopen Submission repositioned above Manager Completion** -- `p_plug_display_sequence`
+   changed from 45 (after) to 35 (before, i.e. between Cycles at 30 and Manager Completion
+   at 40).
+
+6. **Friendly message for "Denied needs a comment," instead of raw ORA-02290.** No precedent
+   anywhere (PMO Hub or the fresh Page Designer export) for `create_page_validation` or an
+   application-level error-handling function, so neither was guessed at. Instead, extended
+   the already-proven write-path trigger (`xxcti_uar_review_items_auth`, added for the
+   earlier authorization fix) with the same rule the check constraint enforces, raised as a
+   custom `raise_application_error` -- exactly the pattern already used there for the
+   cycle-closed and not-authorized checks, which the user never found unfriendly. This
+   trigger has no `WHEN` clause (fires on every update, unlike the audit-stamping trigger),
+   so it also catches the edge case of editing comments to blank on an already-denied row,
+   not just the common "pick Denied and save" path. The check constraint remains as a
+   backstop for anything that writes to the table outside this trigger's reach.
+
+Mechanically verified before committing: every new/changed component id resolves correctly
+with no dangling references, the Manager Completion IR's `p_report_columns` list matches its
+8 worksheet columns exactly, and quote-doubling checked whole-file across both changed SQL
+files.
