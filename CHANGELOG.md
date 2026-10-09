@@ -748,3 +748,33 @@ filter/sort/show-distinct-values out of the box, exactly matching P20's actual d
 has no custom search box either). IR is inherently read-only unless explicitly configured
 for inline editing, which this isn't -- satisfies "obviously it shouldn't be editable" with
 no extra configuration needed.
+
+## P1 employee list: converted from a read-only Interactive Grid to an Interactive Report (2026-10-09)
+
+Per the apex-app-builder skill's guidance (read-only analysis belongs on an Interactive
+Report; a read-only grid is justified only for frozen columns, cell-range copy, or as the
+detail of another grid -- none of which apply here), converted P1_EMPLOYEES from
+`NATIVE_IG` (`p_is_editable=>false`) to `NATIVE_IR`, matching the same `create_worksheet` /
+`create_worksheet_column` / `create_worksheet_rpt` shape already proven on P4.
+
+The original reason for choosing IG over Classic Report here (getting a working link to
+Page 2, since `#COLUMN#` link-column substitution silently failed under this app's Friendly
+URLs) is solved differently and more robustly this time: an Interactive Report worksheet
+column has no NATIVE_LINK item type, so the link is built the way PMO Hub's P20 does it --
+an `apex_page.get_url(...)` call directly in the SQL source (two items, `P2_EMPLOYEE_ID` and
+`P2_CYCLE_ID`, passed as comma-delimited `p_items`/`p_values`), returned as a hidden
+`EMPLOYEE_URL` column (`p_display_text_as=>'HIDDEN_ESCAPE_SC'`), referenced from the visible
+`EMPLOYEE_ID` column's HTML expression (`<a href="#EMPLOYEE_URL#">#EMPLOYEE_ID#</a>`). This
+`#COL#` substitution is a different, separate APEX mechanism from the link-column kind that
+failed before -- proven working in PMO Hub's live app, not a retry of the earlier approach.
+
+Dropped `EMPLOYEE_NUMBER` from the outer `SELECT` entirely -- it was already hidden and
+nothing downstream on this page reads it; it's still used internally in the query's
+join/filter logic. Mechanically verified before committing: all 6 `p_db_column_name` values
+appear in the default report's `p_report_columns` list, all 6 `p_column_identifier` letters
+are unique, and the existing "manager changed -> refresh this region" dynamic action still
+targets the same region id (unchanged by the region-type swap).
+
+**Flag for testing:** the same IR conversion pattern was used for P4 (commit `00f9d34`) and,
+per the apex-app-builder skill's own verification notes, was never actually confirmed
+rendering in a browser. Test both P1 and P4 together this round.
