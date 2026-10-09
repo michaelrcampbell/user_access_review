@@ -845,7 +845,7 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_display_sequence=>1
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'htp.p(''<style>#P2_BACK_BUTTON{margin-top:20px;}</style>'');'))
+'htp.p(''<style>[data-otel-label="P2_BACK_BUTTON"]{margin-top:20px;}</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000300)

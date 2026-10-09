@@ -905,3 +905,12 @@ used elsewhere in this app) targeting the button by its name-derived DOM id
 (`#P2_BACK_BUTTON` -- APEX's standard convention: a button's id defaults to its name unless a
 static id overrides it) with `margin-top:20px`. Not confirmed against the live DOM -- if the
 id guess is wrong, this will just have no visible effect, not break anything.
+
+## P2 back button spacing: correct selector, found via live DOM inspection (2026-10-09)
+
+The `#P2_BACK_BUTTON` id guess was wrong -- confirmed via the button's actual rendered
+HTML, pasted by the user: its real `id` is an internal generated value
+(`B12787771470140425`) that would change on every reimport, not usable as a stable
+selector. The button does carry `data-otel-label="P2_BACK_BUTTON"`, though -- an
+OpenTelemetry attribute APEX stamps with the component's declared name, stable across
+reimports. Switched the CSS selector to `[data-otel-label="P2_BACK_BUTTON"]`.
