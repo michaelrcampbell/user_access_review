@@ -893,3 +893,15 @@ already matched the original exactly; only the plug id was wrong, apparently cop
 incorrectly when this file was first hand-authored. Fixed to point at our own
 `P2_RESPONSIBILITY` plug (`9700000000000320`) instead of `P2_EMPLOYEE_REVIEW`
 (`9700000000000300`).
+
+## P2 back button: spacing fix (2026-10-09)
+
+User reported the (now correctly-positioned, per the prior fix) back button renders too
+close to the "Employee Review" title's icon above it -- likely because the Hero region's
+title/icon sits directly above P2_RESPONSIBILITY (its own header hidden via
+`t-IRR-region--hideHeader`), with no natural gap between them now that the button renders at
+the top of that region. Added a small scoped `<style>` rule (same CSS-injection technique
+used elsewhere in this app) targeting the button by its name-derived DOM id
+(`#P2_BACK_BUTTON` -- APEX's standard convention: a button's id defaults to its name unless a
+static id overrides it) with `margin-top:20px`. Not confirmed against the live DOM -- if the
+id guess is wrong, this will just have no visible effect, not break anything.

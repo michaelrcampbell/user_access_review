@@ -840,6 +840,14 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000309)
+,p_plug_name=>'P2_BACK_BUTTON_SPACING_CSS'
+,p_plug_display_sequence=>1
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>#P2_BACK_BUTTON{margin-top:20px;}</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000300)
 ,p_plug_name=>'P2_EMPLOYEE_REVIEW'
 ,p_title=>'Employee Review'
