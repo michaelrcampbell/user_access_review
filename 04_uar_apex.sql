@@ -1226,29 +1226,6 @@ wwv_flow_imp_page.create_region_column(
 ,p_duplicate_value=>true
 ,p_include_in_export=>true
 );
-wwv_flow_imp_page.create_region_column(
- p_id=>wwv_flow_imp.id(9700000000000333)
-,p_name=>'APEX$ROW_ACTION'
-,p_item_type=>'NATIVE_ROW_ACTION'
-,p_label=>'Actions'
-,p_heading_alignment=>'CENTER'
-,p_display_sequence=>0
-,p_value_alignment=>'CENTER'
-,p_enable_hide=>true
-,p_is_primary_key=>false
-);
-wwv_flow_imp_page.create_region_column(
- p_id=>wwv_flow_imp.id(9700000000000334)
-,p_name=>'APEX$ROW_SELECTOR'
-,p_item_type=>'NATIVE_ROW_SELECTOR'
-,p_display_sequence=>5
-,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
-  'enable_multi_select', 'Y',
-  'hide_control', 'N',
-  'show_select_all', 'Y')).to_clob
-,p_enable_hide=>true
-,p_is_primary_key=>false
-);
 wwv_flow_imp_page.create_interactive_grid(
  p_id=>wwv_flow_imp.id(9700000000000340)
 ,p_internal_uid=>1700000000000340
@@ -1384,14 +1361,6 @@ wwv_flow_imp_page.create_ig_report_column(
 ,p_view_id=>wwv_flow_imp.id(9700000000000342)
 ,p_display_seq=>12
 ,p_column_id=>wwv_flow_imp.id(9700000000000332)
-,p_is_visible=>true
-,p_is_frozen=>false
-);
-wwv_flow_imp_page.create_ig_report_column(
- p_id=>wwv_flow_imp.id(9700000000000362)
-,p_view_id=>wwv_flow_imp.id(9700000000000342)
-,p_display_seq=>0
-,p_column_id=>wwv_flow_imp.id(9700000000000333)
 ,p_is_visible=>true
 ,p_is_frozen=>false
 );

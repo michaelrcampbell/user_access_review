@@ -914,3 +914,12 @@ HTML, pasted by the user: its real `id` is an internal generated value
 selector. The button does carry `data-otel-label="P2_BACK_BUTTON"`, though -- an
 OpenTelemetry attribute APEX stamps with the component's declared name, stable across
 reimports. Switched the CSS selector to `[data-otel-label="P2_BACK_BUTTON"]`.
+
+## P2: removed the row-selector/row-action column (2026-10-09)
+
+Removed `APEX$ROW_SELECTOR` (the bulk-edit checkbox column, added earlier this project for
+multi-row approve/deny) and `APEX$ROW_ACTION` (the per-row "..." menu) from P2's grid --
+both the `create_region_column` definitions and the one `create_ig_report_column` wiring
+entry that made `ROW_ACTION` visible (`ROW_SELECTOR` was never wired into the view, per the
+earlier `p_required_patch` finding -- nothing to remove there beyond its own definition).
+Simplifies the grid back down to just the data columns.
