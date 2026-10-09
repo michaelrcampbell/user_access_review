@@ -127,6 +127,29 @@ create or replace package xxcti_uar_cycle_pkg as
     -- 'Y'/'N' -- whether p_cycle_id currently accepts edits.
     function can_edit_cycle(p_cycle_id in number) return varchar2;
 
+    -- 'Y'/'N' -- whether p_manager_id has already submitted their review for
+    -- p_cycle_id (a row exists in xxcti_uar_manager_signoffs).
+    function manager_signed_off(p_cycle_id in number, p_manager_id in number) return varchar2;
+
+    -- 'Y'/'N' -- whether a specific review item may still be edited: the
+    -- cycle must be open AND the item's manager must not have submitted.
+    -- This is the one check both the Page 2 load gate and the
+    -- xxcti_uar_review_items_auth trigger call, so both enforce the same
+    -- rule. Resolves the manager from p_employee_number itself rather than
+    -- trusting a caller-supplied manager id.
+    function can_edit_item(p_employee_number in varchar2, p_cycle_id in number) return varchar2;
+
+    -- Records that p_manager_id has submitted their review for p_cycle_id.
+    -- Idempotent -- submitting twice is a no-op, not an error. Page 1 only
+    -- offers this once every item is complete, but the check is not
+    -- re-validated here; the caller (the page) is responsible for only
+    -- offering it when true.
+    procedure submit_review(p_cycle_id in number, p_manager_id in number);
+
+    -- Undoes a submission, unlocking that manager's items again. Admin UI
+    -- only (Page 3).
+    procedure reopen_review(p_cycle_id in number, p_manager_id in number);
+
     -- Permanently deletes a cycle and every review item in it -- including
     -- any approval/denial/comment history already recorded. No undo. Admin
     -- UI only (Page 6), intended for cleaning up test/mistake cycles.
@@ -226,8 +249,57 @@ create or replace package body xxcti_uar_cycle_pkg as
             return 'N';
     end can_edit_cycle;
 
+    function manager_signed_off(p_cycle_id in number, p_manager_id in number) return varchar2 is
+        l_count number;
+    begin
+        select count(*)
+          into l_count
+          from xxcti_uar_manager_signoffs
+         where cycle_id = p_cycle_id
+           and manager_id = p_manager_id;
+
+        return case when l_count > 0 then 'Y' else 'N' end;
+    end manager_signed_off;
+
+    function can_edit_item(p_employee_number in varchar2, p_cycle_id in number) return varchar2 is
+        l_manager_id number;
+    begin
+        if can_edit_cycle(p_cycle_id) = 'N' then
+            return 'N';
+        end if;
+
+        select manager_id
+          into l_manager_id
+          from xxcti_uar_workday_employee_mgr
+         where to_char(employee_id) = p_employee_number;
+
+        return case when manager_signed_off(p_cycle_id, l_manager_id) = 'Y' then 'N' else 'Y' end;
+    exception
+        when no_data_found then
+            return 'N';
+    end can_edit_item;
+
+    procedure submit_review(p_cycle_id in number, p_manager_id in number) is
+    begin
+        insert into xxcti_uar_manager_signoffs (cycle_id, manager_id)
+        values (p_cycle_id, p_manager_id);
+        commit;
+    exception
+        when dup_val_on_index then
+            null;
+    end submit_review;
+
+    procedure reopen_review(p_cycle_id in number, p_manager_id in number) is
+    begin
+        delete from xxcti_uar_manager_signoffs
+         where cycle_id = p_cycle_id
+           and manager_id = p_manager_id;
+        commit;
+    end reopen_review;
+
     procedure delete_cycle(p_cycle_id in number) is
     begin
+        delete from xxcti_uar_manager_signoffs where cycle_id = p_cycle_id;
         delete from xxcti_uar_review_items_history
          where review_item_id in (
             select review_item_id from xxcti_uar_review_items where cycle_id = p_cycle_id
@@ -281,9 +353,10 @@ create or replace trigger xxcti_uar_review_items_auth
     before update on xxcti_uar_review_items
     for each row
 begin
-    if xxcti_uar_cycle_pkg.can_edit_cycle(:old.cycle_id) = 'N' then
+    if xxcti_uar_cycle_pkg.can_edit_item(:old.employee_number, :old.cycle_id) = 'N' then
         raise_application_error(-20020,
-            'This review cycle is closed; its items can no longer be changed.');
+            'This review cycle is closed, or this manager''s review has already been ' ||
+            'submitted; items can no longer be changed.');
     end if;
 
     if xxcti_uar_security_pkg.can_review(:old.employee_number) = 'N' then

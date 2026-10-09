@@ -555,6 +555,31 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000220
 );
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000260)
+,p_process_sequence=>15
+,p_process_point=>'BEFORE_HEADER'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Compute Submit Eligibility'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+':P1_CAN_SUBMIT := null;',
+'if :P1_CYCLE_ID is not null then',
+'   begin',
+'      select case when pct_complete = 100 then ''Y'' end',
+'        into :P1_CAN_SUBMIT',
+'        from xxcti_uar_cycle_progress',
+'       where cycle_id = :P1_CYCLE_ID',
+'         and manager_id = :P1_MANAGER;',
+'   exception when no_data_found then',
+'      :P1_CAN_SUBMIT := null;',
+'   end;',
+'   if xxcti_uar_cycle_pkg.manager_signed_off(:P1_CYCLE_ID, :P1_MANAGER) = ''Y'' then',
+'      :P1_CAN_SUBMIT := null;',
+'   end if;',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_internal_uid=>1700000000000260
+);
 wwv_flow_imp_page.create_report_region(
  p_id=>wwv_flow_imp.id(9700000000000270)
 ,p_name=>'P1_PROGRESS'
@@ -608,6 +633,98 @@ wwv_flow_imp_page.create_report_columns(
 ,p_column_alignment=>'RIGHT'
 ,p_heading_alignment=>'RIGHT'
 ,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000261)
+,p_plug_name=>'P1_SUBMIT_STATUS'
+,p_plug_display_sequence=>22
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_submitted_date date;',
+'begin',
+'   if :P1_CYCLE_ID is not null then',
+'      if xxcti_uar_cycle_pkg.manager_signed_off(:P1_CYCLE_ID, :P1_MANAGER) = ''Y'' then',
+'         begin',
+'            select submitted_date into l_submitted_date',
+'              from xxcti_uar_manager_signoffs',
+'             where cycle_id = :P1_CYCLE_ID',
+'               and manager_id = :P1_MANAGER;',
+'         exception when no_data_found then',
+'            l_submitted_date := null;',
+'         end;',
+'         htp.p(''<div class="uar-submit-status" style="background:#EAF4EC;border-left:3px solid #1A7C4F;padding:10px 14px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'         htp.p(''You submitted your review on <strong>'' || to_char(l_submitted_date,''Mon DD, YYYY'') || ''</strong>. An admin can reopen it if you need to make a change.'');',
+'         htp.p(''</div>'');',
+'      elsif :P1_CAN_SUBMIT is null then',
+'         htp.p(''<div class="uar-submit-status" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:10px 14px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'         htp.p(''Complete every item below before you can submit your review.'');',
+'         htp.p(''</div>'');',
+'      end if;',
+'   end if;',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000262)
+,p_plug_name=>'P1_SUBMIT_REVIEW'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>24
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000263)
+,p_name=>'P1_CAN_SUBMIT'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000262)
+,p_display_as=>'NATIVE_HIDDEN'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'value_protected', 'Y')).to_clob
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000264)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000262)
+,p_button_name=>'SUBMIT_REVIEW'
+,p_button_action=>'DEFINED_BY_DA'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Submit My Review'
+,p_button_position=>'CREATE'
+,p_button_condition=>'P1_CAN_SUBMIT'
+,p_button_condition_type=>'ITEM_IS_NOT_NULL'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000000266)
+,p_name=>'Confirm Submit Review'
+,p_event_sequence=>10
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_imp.id(9700000000000264)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000000267)
+,p_event_id=>wwv_flow_imp.id(9700000000000266)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'if(confirm("Submit your review? You will not be able to make further changes unless an admin reopens it.")){apex.submit("SUBMIT_REVIEW");}'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000265)
+,p_process_sequence=>10
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Submit Review'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''SUBMIT_REVIEW'' then',
+'   xxcti_uar_cycle_pkg.submit_review(:P1_CYCLE_ID, :P1_MANAGER);',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000265
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000240)
@@ -828,7 +945,7 @@ wwv_flow_imp_page.create_page_process(
 '   apex_util.redirect_url(apex_page.get_url(p_page => 1));',
 'end if;',
 '',
-'if xxcti_uar_cycle_pkg.can_edit_cycle(:P2_CYCLE_ID) = ''N'' then',
+'if xxcti_uar_cycle_pkg.can_edit_item(:P2_EMPLOYEE_ID, :P2_CYCLE_ID) = ''N'' then',
 '   apex_util.redirect_url(apex_page.get_url(p_page => 1));',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
@@ -1776,10 +1893,15 @@ wwv_flow_imp_page.create_report_region(
 '       uwe.email_address,',
 '       cp.total_items,',
 '       cp.completed_items,',
-'       cp.pct_complete',
+'       cp.pct_complete,',
+'       case when so.manager_id is not null then ''Yes'' else ''No'' end as submitted,',
+'       so.submitted_date',
 'from xxcti_uar_cycle_progress cp',
 'join xxcti_uar_workday_employee_mgr uwe',
 '  on cp.manager_id = uwe.employee_id',
+'left join xxcti_uar_manager_signoffs so',
+'  on so.cycle_id = cp.cycle_id',
+' and so.manager_id = cp.manager_id',
 'where cp.cycle_id = xxcti_uar_cycle_pkg.current_open_cycle',
 'order by cp.pct_complete'))
 ,p_ajax_enabled=>'Y'
@@ -1848,6 +1970,85 @@ wwv_flow_imp_page.create_report_columns(
 ,p_heading_alignment=>'RIGHT'
 ,p_derived_column=>'N'
 ,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000446)
+,p_query_column_id=>6
+,p_column_alias=>'SUBMITTED'
+,p_column_display_sequence=>6
+,p_column_heading=>'Submitted'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000000447)
+,p_query_column_id=>7
+,p_column_alias=>'SUBMITTED_DATE'
+,p_column_display_sequence=>7
+,p_column_heading=>'Submitted Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000530)
+,p_plug_name=>'P3_REOPEN_SUBMISSION'
+,p_title=>'Reopen a Manager''s Submission'
+,p_icon_css_classes=>'fa-lg fa-unlock'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>45
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000531)
+,p_name=>'P3_REOPEN_MANAGER_ID'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000530)
+,p_prompt=>'Manager'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select m.employee_legal_first_name || '' '' || m.employee_legal_last_name as d,',
+'       s.manager_id as r',
+'from xxcti_uar_manager_signoffs s',
+'join xxcti_uar_workday_employee_mgr m',
+'  on m.employee_id = s.manager_id',
+'where s.cycle_id = xxcti_uar_cycle_pkg.current_open_cycle',
+'order by 1'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select a manager -'
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000000532)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000000530)
+,p_button_name=>'REOPEN_SUBMISSION'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Reopen Submission'
+,p_button_position=>'CREATE'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000533)
+,p_process_sequence=>20
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Reopen Submission'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''REOPEN_SUBMISSION'' then',
+'   xxcti_uar_cycle_pkg.reopen_review(',
+'      xxcti_uar_cycle_pkg.current_open_cycle,',
+'      :P3_REOPEN_MANAGER_ID',
+'   );',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000533
 );
 end;
 /

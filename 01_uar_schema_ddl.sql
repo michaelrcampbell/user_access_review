@@ -119,6 +119,29 @@ comment on table xxcti_uar_review_items_history is
   || 'silently overwritten if a manager revises their own decision before the cycle closes.';
 
 -- ----------------------------------------------------------------------------
+-- 2c. Manager sign-off. A manager submits their review once every item is
+--     complete; the write-path trigger then locks their items for the rest
+--     of the cycle (xxcti_uar_cycle_pkg.can_edit_item,
+--     xxcti_uar_review_items_auth in 02_uar_packages.sql). Only an admin can
+--     reopen a submission (Page 3), which is a plain delete of this row --
+--     there is no separate "reopened" state to track.
+-- ----------------------------------------------------------------------------
+create table xxcti_uar_manager_signoffs (
+    cycle_id       number        not null,
+    manager_id     number        not null,
+    submitted_by   varchar2(240) default sys_context('APEX$SESSION','APP_USER'),
+    submitted_date date          default sysdate not null,
+    constraint xxcti_uar_manager_signoffs_pk primary key (cycle_id, manager_id),
+    constraint xxcti_uar_manager_signoffs_cyc_fk foreign key (cycle_id)
+        references xxcti_uar_review_cycles (cycle_id)
+);
+
+comment on table xxcti_uar_manager_signoffs is
+  'One row per manager who has submitted their review for a cycle. Presence of a row '
+  || 'locks that manager''s items against further edits until an admin deletes it '
+  || '(xxcti_uar_cycle_pkg.reopen_review) or the cycle closes.';
+
+-- ----------------------------------------------------------------------------
 -- 3. Admin allow-list (carried over from the phase-1 security patch)
 -- ----------------------------------------------------------------------------
 create table xxcti_uar_admins (

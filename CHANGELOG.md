@@ -778,3 +778,45 @@ targets the same region id (unchanged by the region-type swap).
 **Flag for testing:** the same IR conversion pattern was used for P4 (commit `00f9d34`) and,
 per the apex-app-builder skill's own verification notes, was never actually confirmed
 rendering in a browser. Test both P1 and P4 together this round.
+
+## Manager sign-off: submit, lock, and admin reopen (2026-10-09)
+
+Per the apex-app-builder skill's review (item 5, approved by the user): a manager can now
+submit their review once every item is complete, which locks their items for the rest of
+the cycle; only an admin can undo that.
+
+**Schema (`01_uar_schema_ddl.sql`):** new table `xxcti_uar_manager_signoffs`
+(`cycle_id`, `manager_id`, `submitted_by`, `submitted_date`), PK on `(cycle_id, manager_id)`.
+Presence of a row is the lock -- there's no separate status flag to go stale.
+
+**Package (`02_uar_packages.sql`):** `xxcti_uar_cycle_pkg` gains `manager_signed_off`,
+`can_edit_item` (combines the existing cycle-open check with the new signed-off check --
+resolves the manager from the employee number itself, not a caller-supplied value),
+`submit_review` (idempotent insert), and `reopen_review` (delete). `delete_cycle` now also
+purges signoffs for symmetry with the history/items cleanup already there.
+
+**Write-path enforcement:** `xxcti_uar_review_items_auth` (the trigger added for the earlier
+authorization fix) now calls `can_edit_item` instead of `can_edit_cycle` directly -- the same
+one function both the trigger and Page 2's load gate call, so there's one rule, not two
+copies of it that could drift apart. This also means the lock applies regardless of who's
+editing; an admin wanting to fix a submitted manager's items has to reopen it first, same as
+anyone else -- no quiet admin bypass.
+
+**Page 1:** a new `BEFORE_HEADER` process computes a hidden `P1_CAN_SUBMIT` flag (100%
+complete, cycle open, not already submitted). A new region holds the Submit button, shown
+only when that flag is set -- the exact `p_button_condition`/`ITEM_IS_NOT_NULL` idiom PMO
+Hub's own status-report lock/unlock buttons already use (confirmed by grep before copying,
+not assumed). The button is `DEFINED_BY_DA` with a `confirm()` guard, same shape as every
+other destructive-ish action in this app. A status region above it shows "submitted on
+<date>" once locked, or "complete every item" while progress is under 100%.
+
+**Page 3:** the Manager Completion report gains Submitted/Submitted Date columns. A new
+"Reopen a Manager's Submission" form lists only managers currently signed off for the open
+cycle (plain `SUBMIT`, no confirm -- reopening is reversible by the manager just resubmitting,
+unlike the destructive actions elsewhere on this page).
+
+Mechanically verified before committing: every new component id is unique and every
+cross-reference resolves, and quote-doubling checked whole-file across all three changed
+files.
+
+**Untested -- branch is for review before merging.**
