@@ -435,11 +435,11 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''<strong>How to complete your review:</strong> Below is the list of employees '');',
-'htp.p(''currently assigned to you. For each access item, review the responsibility and '');',
-'htp.p(''application listed, then mark it <strong>Approved</strong> or <strong>Denied</strong>. '');',
-'htp.p(''Add a comment if you deny an item or need to explain your decision, then save your '');',
-'htp.p(''changes before the due date for this review cycle.'');',
+'htp.p(''<strong>How to use this page:</strong> Below is the list of employees currently '');',
+'htp.p(''assigned to you for this cycle. Click an employee''''s ID to open their access items '');',
+'htp.p(''for review. Once every item below shows as complete, use the '');',
+'htp.p(''<strong>Submit My Review</strong> button above to finalize your submission before '');',
+'htp.p(''the due date for this review cycle.'');',
 'htp.p(''</div>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
@@ -892,6 +892,19 @@ wwv_flow_imp_page.create_page_process(
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000310
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000311)
+,p_plug_name=>'P2_INSTRUCTIONS'
+,p_plug_display_sequence=>20
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'htp.p(''<strong>How to complete this review:</strong> For each access item below, review '');',
+'htp.p(''the responsibility and application listed, then mark it <strong>Approved</strong> '');',
+'htp.p(''or <strong>Denied</strong> in the Approval column. Add a comment if you deny an '');',
+'htp.p(''item or need to explain your decision, then click <strong>Save</strong>.'');',
+'htp.p(''</div>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000320)

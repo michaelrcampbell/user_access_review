@@ -933,3 +933,15 @@ this project (the `p_required_patch` fix). Restored its `create_region_column` d
 (id `9700000000000334`, unchanged shape) -- no `create_ig_report_column` wiring needed, per
 the earlier confirmed finding that this column renders from its region-column definition
 alone.
+
+## Split instructions: P1 describes P1, P2 describes P2 (2026-10-09)
+
+P1's instructions previously described the whole workflow, including P2-only actions
+(marking Approved/Denied, commenting, saving) that a manager hasn't reached yet when
+they're still looking at their team list. Rewrote P1's text to describe only what's on
+P1 (click an employee to open their items, submit once everything's complete), and added
+a new `P2_INSTRUCTIONS` region (same `NATIVE_PLSQL` conditional-htp.p pattern used
+throughout this app, sequence 20 -- between the employee-context Hero region and the
+editable grid) carrying the approve/deny/comment/save instructions that actually belong
+there. Quote-doubling for the one apostrophe ("employee's") mechanically verified by
+collapsing both escaping layers by hand, not just checking the file-wide balance.
