@@ -958,3 +958,16 @@ the title/icon render from the region's own template chrome regardless of what's
 Icons reused from the nav list rather than picked fresh, so the page header matches its own
 nav entry: P1 "My Team Review" / `fa-check-square-o`, P3 "Review Cycles" / `fa-calendar`,
 P4 "Audit History" / `fa-database-lock`, P7 "Admin Users" / `fa-user-plus`.
+
+## Spacing below each new title banner (2026-10-09)
+
+User reported the title banners added last commit feel crowded against the content below.
+The title regions are empty Hero-template plugs with no body content of their own, so CSS
+can't be injected inside them directly -- used the same `:has()` selector technique already
+proven on the Global Page's nav-hiding (`.t-HeroRegion:has(.fa-check-square-o)` etc.),
+targeting each page's title banner by its own icon class, scoped safely because only the
+title region on each page actually carries the `t-HeroRegion` wrapper class (other regions
+on P7 reuse the same icon, `fa-user-plus`, but aren't Hero-templated, so the combined
+selector doesn't match them). Added `margin-bottom:3em` to each. Extended the existing CSS
+regions on P1 (the greeting) and P3/P7 (the field-width regions) rather than add new ones;
+added one small new region on P4, which had no existing CSS injection point.

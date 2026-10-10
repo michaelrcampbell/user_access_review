@@ -425,7 +425,8 @@ wwv_flow_imp_page.create_page_plug(
 '      l_first := :APP_USER;',
 '   end;',
 '   l_first := nvl(l_first, :APP_USER);',
-'   htp.p(''<style>.uar-greeting{font-size:1.1rem;font-weight:600;color:#2E75B6;margin:4px 0 10px;}</style>'');',
+'   htp.p(''<style>.uar-greeting{font-size:1.1rem;font-weight:600;color:#2E75B6;margin:4px 0 10px;}'');',
+'   htp.p(''.t-HeroRegion:has(.fa-check-square-o){margin-bottom:3em;}</style>'');',
 '   htp.p(''<div id="uar-greeting" class="uar-greeting" data-name="'' || apex_escape.html(l_first) || ''">Hello, '' || apex_escape.html(l_first) || ''!</div>'');',
 '   htp.p(''<script>'');',
 '   htp.p(''(function(){'');',
@@ -1461,6 +1462,7 @@ wwv_flow_imp_page.create_page_plug(
 'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
 'htp.p(''.t-Form-fieldContainer select'');',
 'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''.t-HeroRegion:has(.fa-calendar){margin-bottom:3em;}'');',
 'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
@@ -2060,6 +2062,14 @@ wwv_flow_imp_page.create_page_plug(
 ,p_location=>null
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000194)
+,p_plug_name=>'P4_TITLE_SPACING_CSS'
+,p_plug_display_sequence=>2
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>.t-HeroRegion:has(.fa-database-lock){margin-bottom:3em;}</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000460)
 ,p_plug_name=>'P4_AUDIT_HISTORY'
 ,p_plug_template=>2100526641005906379
@@ -2352,6 +2362,7 @@ wwv_flow_imp_page.create_page_plug(
 'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
 'htp.p(''.t-Form-fieldContainer select'');',
 'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''.t-HeroRegion:has(.fa-user-plus){margin-bottom:3em;}'');',
 'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
