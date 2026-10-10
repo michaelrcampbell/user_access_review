@@ -363,6 +363,15 @@ begin
         raise_application_error(-20021,
             'You are not authorized to review this employee.');
     end if;
+
+    -- Same rule as xxcti_uar_review_items_denial_ck (01_uar_schema_ddl.sql), checked
+    -- here first so the user sees this message instead of the constraint's raw
+    -- ORA-02290 -- the constraint stays as a backstop for anything that updates the
+    -- table outside this trigger's reach.
+    if :new.approval = 'Denied' and trim(:new.comments) is null then
+        raise_application_error(-20022,
+            'A comment is required when denying an item -- please explain why before saving.');
+    end if;
 end;
 /
 show errors

@@ -820,3 +820,154 @@ cross-reference resolves, and quote-doubling checked whole-file across all three
 files.
 
 **Untested -- branch is for review before merging.**
+
+## Six usability fixes from user review (2026-10-09)
+
+1. **P2 back button** -- already existed (`P2_BACK_BUTTON`, confirmed working in an earlier
+   test session), no change made. Flagged to the user in case it's not actually appearing,
+   rather than silently skipping the request.
+
+2. **P1 manager dropdown removed; moved to P3.** The dropdown only ever mattered for admins
+   browsing another manager's team -- redundant UI for a regular user checking their own
+   team. Removed the Hero region, the `P1_MANAGER` select-list item (now `NATIVE_HIDDEN`,
+   still `value_protected`, same as `P1_CYCLE_ID`), and the now-dead "manager changed ->
+   refresh" dynamic action. `P1_MANAGER_VISIBILITY` (the CSS-hide-the-dropdown-for-non-admins
+   region) is now just `P1_INSTRUCTIONS` -- same message, shown unconditionally, since there's
+   no dropdown left to hide. The `BEFORE_HEADER` default logic (non-admin always forced to
+   their own manager id) is unchanged -- still the thing preventing URL tampering, just no
+   longer paired with a visible control.
+
+3. **No region just for a button.** `P1_SUBMIT_REVIEW` existed only to hold the hidden
+   `P1_CAN_SUBMIT` item and the Submit button. Reviewed PMO Hub's button placement per the
+   user's request: P20's "Create Project" button attaches directly to the same Interactive
+   Report region it acts on (`p_button_plug_id` = the IR's own plug id), not a separate
+   region. Moved the item and button onto `P1_PROGRESS` (same proven form template,
+   `4072358936313175081`) and deleted the standalone region.
+
+4 & 2 (combined). **Manager Completion converted to an Interactive Report, with the manager
+   picker now living there as a link.** Rather than add a separate dropdown+button region to
+   P3 (redundant with the report already listing every manager), the manager-name column is
+   now a link built the same way P1's and P4's employee/row links are --
+   `apex_page.get_url(p_page=>1, p_items=>'P1_MANAGER', ...)` in the SQL source, feeding a
+   hidden `MANAGER_URL` worksheet column referenced from `MANAGER_NAME`'s HTML expression.
+   Clicking a manager's name on P3 opens Page 1 scoped to that manager's team -- the exact
+   functionality the old dropdown provided, positioned where an admin is already looking at
+   each manager's completion status. The report itself gets Interactive Report's native
+   sort/filter/search for free, satisfying "find a manager" directly; "find ... employee" is
+   satisfied one click away, by the already-Interactive-Report employee list on P1 that
+   clicking through lands on.
+
+5. **Reopen Submission repositioned above Manager Completion** -- `p_plug_display_sequence`
+   changed from 45 (after) to 35 (before, i.e. between Cycles at 30 and Manager Completion
+   at 40).
+
+6. **Friendly message for "Denied needs a comment," instead of raw ORA-02290.** No precedent
+   anywhere (PMO Hub or the fresh Page Designer export) for `create_page_validation` or an
+   application-level error-handling function, so neither was guessed at. Instead, extended
+   the already-proven write-path trigger (`xxcti_uar_review_items_auth`, added for the
+   earlier authorization fix) with the same rule the check constraint enforces, raised as a
+   custom `raise_application_error` -- exactly the pattern already used there for the
+   cycle-closed and not-authorized checks, which the user never found unfriendly. This
+   trigger has no `WHEN` clause (fires on every update, unlike the audit-stamping trigger),
+   so it also catches the edge case of editing comments to blank on an already-denied row,
+   not just the common "pick Denied and save" path. The check constraint remains as a
+   backstop for anything that writes to the table outside this trigger's reach.
+
+Mechanically verified before committing: every new/changed component id resolves correctly
+with no dangling references, the Manager Completion IR's `p_report_columns` list matches its
+8 worksheet columns exactly, and quote-doubling checked whole-file across both changed SQL
+files.
+
+## P2 back button: wrong region id, found by diffing against the real original (2026-10-09)
+
+Item 1 from the last batch said "already present" based on reading our own file -- the
+button existed, but existing isn't the same as rendering. User reported it doesn't show.
+
+Diffed our button against `f104.sql`'s actual button line by line rather than trusting
+memory of "this was copied from the original": ours has `p_button_plug_id` pointing at
+`P2_EMPLOYEE_REVIEW` (the Hero-template region) -- the real original attaches it to
+`P2_RESPONSIBILITY` (the IG/IRR-template region) instead, confirmed at `f104.sql:2266`
+(`p_button_plug_id=>wwv_flow_imp.id(9658844932781608)`, which is `P2_RESPONSIBILITY`'s own
+id at `f104.sql:1733`, not `P2_EMPLOYEE_REVIEW`'s). Every other attribute on the button
+already matched the original exactly; only the plug id was wrong, apparently copied
+incorrectly when this file was first hand-authored. Fixed to point at our own
+`P2_RESPONSIBILITY` plug (`9700000000000320`) instead of `P2_EMPLOYEE_REVIEW`
+(`9700000000000300`).
+
+## P2 back button: spacing fix (2026-10-09)
+
+User reported the (now correctly-positioned, per the prior fix) back button renders too
+close to the "Employee Review" title's icon above it -- likely because the Hero region's
+title/icon sits directly above P2_RESPONSIBILITY (its own header hidden via
+`t-IRR-region--hideHeader`), with no natural gap between them now that the button renders at
+the top of that region. Added a small scoped `<style>` rule (same CSS-injection technique
+used elsewhere in this app) targeting the button by its name-derived DOM id
+(`#P2_BACK_BUTTON` -- APEX's standard convention: a button's id defaults to its name unless a
+static id overrides it) with `margin-top:20px`. Not confirmed against the live DOM -- if the
+id guess is wrong, this will just have no visible effect, not break anything.
+
+## P2 back button spacing: correct selector, found via live DOM inspection (2026-10-09)
+
+The `#P2_BACK_BUTTON` id guess was wrong -- confirmed via the button's actual rendered
+HTML, pasted by the user: its real `id` is an internal generated value
+(`B12787771470140425`) that would change on every reimport, not usable as a stable
+selector. The button does carry `data-otel-label="P2_BACK_BUTTON"`, though -- an
+OpenTelemetry attribute APEX stamps with the component's declared name, stable across
+reimports. Switched the CSS selector to `[data-otel-label="P2_BACK_BUTTON"]`.
+
+## P2: removed the row-selector/row-action column (2026-10-09)
+
+Removed `APEX$ROW_SELECTOR` (the bulk-edit checkbox column, added earlier this project for
+multi-row approve/deny) and `APEX$ROW_ACTION` (the per-row "..." menu) from P2's grid --
+both the `create_region_column` definitions and the one `create_ig_report_column` wiring
+entry that made `ROW_ACTION` visible (`ROW_SELECTOR` was never wired into the view, per the
+earlier `p_required_patch` finding -- nothing to remove there beyond its own definition).
+Simplifies the grid back down to just the data columns.
+
+## P2: restored the row-selector checkbox, actions menu stays removed (2026-10-09)
+
+Previous commit removed both system columns; user clarified only the "..." actions menu
+(`APEX$ROW_ACTION`) was the unwanted clutter -- the bulk-edit checkbox column
+(`APEX$ROW_SELECTOR`) should stay, given the effort to get it rendering correctly earlier
+this project (the `p_required_patch` fix). Restored its `create_region_column` definition
+(id `9700000000000334`, unchanged shape) -- no `create_ig_report_column` wiring needed, per
+the earlier confirmed finding that this column renders from its region-column definition
+alone.
+
+## Split instructions: P1 describes P1, P2 describes P2 (2026-10-09)
+
+P1's instructions previously described the whole workflow, including P2-only actions
+(marking Approved/Denied, commenting, saving) that a manager hasn't reached yet when
+they're still looking at their team list. Rewrote P1's text to describe only what's on
+P1 (click an employee to open their items, submit once everything's complete), and added
+a new `P2_INSTRUCTIONS` region (same `NATIVE_PLSQL` conditional-htp.p pattern used
+throughout this app, sequence 20 -- between the employee-context Hero region and the
+editable grid) carrying the approve/deny/comment/save instructions that actually belong
+there. Quote-doubling for the one apostrophe ("employee's") mechanically verified by
+collapsing both escaping layers by hand, not just checking the file-wide balance.
+
+## Title+icon banner on every page, matching P2's "Employee Review" (2026-10-09)
+
+P2 was the only page with the Hero-template title+icon banner at the top. P1 actually had
+one too, originally, but it was removed along with the manager dropdown (they shared the
+same region). Added an empty Hero-template title region (`plug_template=>2674017834225413037`,
+`#DEFAULT#:t-HeroRegion--noPadding` -- the exact shape already proven on P2's
+`P2_EMPLOYEE_REVIEW`) as the first region on P1, P3, P4, and P7. No body content needed --
+the title/icon render from the region's own template chrome regardless of what's inside.
+
+Icons reused from the nav list rather than picked fresh, so the page header matches its own
+nav entry: P1 "My Team Review" / `fa-check-square-o`, P3 "Review Cycles" / `fa-calendar`,
+P4 "Audit History" / `fa-database-lock`, P7 "Admin Users" / `fa-user-plus`.
+
+## Spacing below each new title banner (2026-10-09)
+
+User reported the title banners added last commit feel crowded against the content below.
+The title regions are empty Hero-template plugs with no body content of their own, so CSS
+can't be injected inside them directly -- used the same `:has()` selector technique already
+proven on the Global Page's nav-hiding (`.t-HeroRegion:has(.fa-check-square-o)` etc.),
+targeting each page's title banner by its own icon class, scoped safely because only the
+title region on each page actually carries the `t-HeroRegion` wrapper class (other regions
+on P7 reuse the same icon, `fa-user-plus`, but aren't Hero-templated, so the combined
+selector doesn't match them). Added `margin-bottom:3em` to each. Extended the existing CSS
+regions on P1 (the greeting) and P3/P7 (the field-width regions) rather than add new ones;
+added one small new region on P4, which had no existing CSS injection point.
