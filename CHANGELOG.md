@@ -971,3 +971,15 @@ on P7 reuse the same icon, `fa-user-plus`, but aren't Hero-templated, so the com
 selector doesn't match them). Added `margin-bottom:3em` to each. Extended the existing CSS
 regions on P1 (the greeting) and P3/P7 (the field-width regions) rather than add new ones;
 added one small new region on P4, which had no existing CSS injection point.
+
+## P2: title spacing and Edit-button instruction (2026-10-10)
+
+Added `margin-bottom:3em` below P2's title banner, same `:has()` technique and value used on
+the other pages' title spacing fix -- extended the existing `P2_BACK_BUTTON_SPACING_CSS`
+region rather than add a new one, targeting `.t-HeroRegion:has(.fa-list-ul)` (unique to the
+title region on this page; `P2_RESPONSIBILITY` below it has no icon class to collide with).
+
+Instructions now open with "Click Edit above the list to start editing" -- the grid loads
+read-only until that toolbar button is clicked (this app's confirmed, proven-matching-the-
+original behavior, not something to change), and nothing previously told the user that step
+was required.
