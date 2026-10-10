@@ -945,3 +945,16 @@ throughout this app, sequence 20 -- between the employee-context Hero region and
 editable grid) carrying the approve/deny/comment/save instructions that actually belong
 there. Quote-doubling for the one apostrophe ("employee's") mechanically verified by
 collapsing both escaping layers by hand, not just checking the file-wide balance.
+
+## Title+icon banner on every page, matching P2's "Employee Review" (2026-10-09)
+
+P2 was the only page with the Hero-template title+icon banner at the top. P1 actually had
+one too, originally, but it was removed along with the manager dropdown (they shared the
+same region). Added an empty Hero-template title region (`plug_template=>2674017834225413037`,
+`#DEFAULT#:t-HeroRegion--noPadding` -- the exact shape already proven on P2's
+`P2_EMPLOYEE_REVIEW`) as the first region on P1, P3, P4, and P7. No body content needed --
+the title/icon render from the region's own template chrome regardless of what's inside.
+
+Icons reused from the nav list rather than picked fresh, so the page header matches its own
+nav entry: P1 "My Team Review" / `fa-check-square-o`, P3 "Review Cycles" / `fa-calendar`,
+P4 "Audit History" / `fa-database-lock`, P7 "Admin Users" / `fa-user-plus`.

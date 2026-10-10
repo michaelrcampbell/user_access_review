@@ -397,6 +397,16 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000190)
+,p_plug_name=>'P1_TITLE'
+,p_title=>'My Team Review'
+,p_icon_css_classes=>'fa-check-square-o'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>1
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000230)
 ,p_plug_name=>'P1_GREETING'
 ,p_plug_template=>0
@@ -1432,6 +1442,16 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000191)
+,p_plug_name=>'P3_TITLE'
+,p_title=>'Review Cycles'
+,p_icon_css_classes=>'fa-calendar'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>1
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000399)
 ,p_plug_name=>'P3_FIELD_WIDTH_CSS'
 ,p_plug_display_sequence=>5
@@ -2030,6 +2050,16 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'C'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000192)
+,p_plug_name=>'P4_TITLE'
+,p_title=>'Audit History'
+,p_icon_css_classes=>'fa-database-lock'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>1
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000460)
 ,p_plug_name=>'P4_AUDIT_HISTORY'
 ,p_plug_template=>2100526641005906379
@@ -2301,6 +2331,16 @@ wwv_flow_imp_page.create_page(
 ,p_page_template_options=>'#DEFAULT#'
 ,p_required_role=>wwv_flow_imp.id(9700000000000051)
 ,p_protection_level=>'C'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000193)
+,p_plug_name=>'P7_TITLE'
+,p_title=>'Admin Users'
+,p_icon_css_classes=>'fa-user-plus'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>1
+,p_location=>null
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000799)
