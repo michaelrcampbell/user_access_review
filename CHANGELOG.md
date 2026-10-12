@@ -1054,3 +1054,10 @@ file, so the export doesn't yet reflect it).
 Changed from "Oracle User Access Review (Rebuild)" across the header comment and
 `p_name` default on `create_flow`. The alias (`UAR-REBUILD`) was left as-is -- not asked
 for, and changing it would change every page's URL.
+
+## Application alias: UAR-V2 (2026-10-12)
+
+Changed from `UAR-REBUILD` to `UAR-V2`, matching the "V2" rename. **Every page URL changes**
+(e.g. `/ords/r/ct_bsg_apex/uar-rebuild/my-team-review` becomes
+`/ords/r/ct_bsg_apex/uar-v2/my-team-review`) -- any bookmarked or shared link using the old
+alias will need updating.

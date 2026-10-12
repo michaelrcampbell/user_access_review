@@ -74,7 +74,7 @@ wwv_imp_workspace.create_flow(
  p_id=>wwv_flow.g_flow_id
 ,p_owner=>nvl(wwv_flow_application_install.get_schema,'XXUAR')
 ,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle User Access Review V2')
-,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'UAR-REBUILD')
+,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'UAR-V2')
 ,p_page_view_logging=>'YES'
 ,p_page_protection_enabled_y_n=>'Y'
 ,p_checksum_salt=>'7351B4D0A711040E6177B30EF96F9FF1638173D0702C1D257D3C8F7A5E4CE05E'
