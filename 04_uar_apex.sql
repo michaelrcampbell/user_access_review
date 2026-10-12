@@ -932,7 +932,8 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
 'htp.p(''<strong>How to complete this review:</strong> Click <strong>Edit</strong> above the '');',
-'htp.p(''list to start editing. For each access item below, review the responsibility and '');',
+'htp.p(''list to start editing (or double-click in the Approval cell). For each access item '');',
+'htp.p(''below, review the responsibility and '');',
 'htp.p(''application listed, then mark it <strong>Approved</strong> or <strong>Denied</strong> '');',
 'htp.p(''in the Approval column. Add a comment if you deny an item or need to explain your '');',
 'htp.p(''decision, then click <strong>Save</strong>.'');',

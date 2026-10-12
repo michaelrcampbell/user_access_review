@@ -1111,3 +1111,8 @@ object either way, just now declared in both apps' files instead of only PMO's.
 
 Untested -- branch is for that test specifically (reimport via the App Builder wizard, not
 SQL Scripts).
+
+## P2 instructions: mention double-click as an alternate edit entry point (2026-10-12)
+
+Added "(or double-click in the Approval cell)" after the Edit-button instruction, per user
+request.
