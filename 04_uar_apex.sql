@@ -300,14 +300,22 @@ wwv_flow_imp_shared.create_theme(
 );
 end;
 /
-prompt --application/shared_components/security/authentications/oracle_apex_accounts
+prompt --application/shared_components/security/authentications/azure_ad_sso
 begin
 wwv_flow_imp_shared.create_authentication(
  p_id=>wwv_flow_imp.id(9700000000000010)
-,p_name=>'Oracle APEX Accounts'
-,p_scheme_type=>'NATIVE_APEX_ACCOUNTS'
+,p_name=>'Azure AD SSO'
+,p_scheme_type=>'NATIVE_SOCIAL'
+,p_attribute_01=>wwv_flow_imp.id(10878677230346892)
+,p_attribute_02=>'OPENID_CONNECT'
+,p_attribute_03=>'https://login.microsoftonline.com/5d859f82-437e-44bc-9c59-494f57d7e5d0/v2.0/.well-known/openid-configuration'
+,p_attribute_07=>'openid,email,profile'
+,p_attribute_09=>'email'
+,p_attribute_11=>'N'
+,p_attribute_13=>'Y'
 ,p_invalid_session_type=>'LOGIN'
-,p_use_secure_cookie_yn=>'N'
+,p_post_auth_process=>'XXCTI_UAR_SSO_POST_AUTH'
+,p_use_secure_cookie_yn=>'Y'
 ,p_ras_mode=>0
 ,p_version_scn=>9000000000007
 );

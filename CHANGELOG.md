@@ -1061,3 +1061,34 @@ Changed from `UAR-REBUILD` to `UAR-V2`, matching the "V2" rename. **Every page U
 (e.g. `/ords/r/ct_bsg_apex/uar-rebuild/my-team-review` becomes
 `/ords/r/ct_bsg_apex/uar-v2/my-team-review`) -- any bookmarked or shared link using the old
 alias will need updating.
+
+## Azure AD SSO captured into the export file (2026-10-12)
+
+UAR's authentication scheme was set up directly in the live instance (outside this file)
+in an earlier session; `04_uar_apex.sql` had never reflected it and still showed the
+original placeholder `NATIVE_APEX_ACCOUNTS` scheme. User provided a real component export
+of the live, working "Azure AD SSO" scheme (`f530_components.sql`) rather than have this
+guessed at or copied from PMO Hub blind -- replaced the placeholder scheme with it, matching
+PMO Hub's proven `NATIVE_SOCIAL`/`OPENID_CONNECT` shape exactly (same tenant, same scopes),
+now pointing at `XXCTI_UAR_SSO_POST_AUTH` (confirmed already correct in the live export --
+the fix from earlier this session).
+
+**Found and dropped one real bug while diffing against PMO's own scheme:**
+`p_cookie_name=>'PMO_COOKIE'` in the live export -- a leftover from copying PMO Hub's setup.
+PMO's own scheme doesn't set this at all (relies on the default); two apps sharing a literal
+cookie name risks session collisions for anyone with both open in the same browser. Omitted
+it to match PMO's own proven pattern rather than invent a UAR-specific value.
+
+**Confirmed from the real export:** UAR shares PMO Hub's Azure App Registration/credential
+(`10878677230346892`, "Creation APEX - DEV - PMO") rather than needing its own -- both apps
+live in the same workspace.
+
+**Open risk, not yet resolved:** that credential is created by PMO Hub's own import file,
+under PMO's own `p_default_id_offset`. This file now references the same raw credential id
+under UAR's own (different) offset. Whether `wwv_flow_imp.id()` resolves that reference to
+the correct real object across two separate hand-authored import files with different
+offsets is genuinely untested -- flagged to the user, SSO login is the first thing to test
+after reimporting because of this specifically. If it breaks, the likely fix is adding a
+`wwv_imp_workspace.create_credential` call to this file too, matching PMO's by static id, so
+APEX's import matches/updates the existing workspace object instead of creating a disconnected
+one.
