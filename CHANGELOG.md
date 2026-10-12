@@ -1048,3 +1048,9 @@ must be changed from `XXCTI_PMO_SSO_POST_AUTH` to `XXCTI_UAR_SSO_POST_AUTH`; tha
 isn't in `04_uar_apex.sql` (UAR's authentication scheme there still shows
 `NATIVE_APEX_ACCOUNTS` -- SSO was configured directly in the live instance, outside this
 file, so the export doesn't yet reflect it).
+
+## Application name: "Oracle User Access Review V2" (2026-10-12)
+
+Changed from "Oracle User Access Review (Rebuild)" across the header comment and
+`p_name` default on `create_flow`. The alias (`UAR-REBUILD`) was left as-is -- not asked
+for, and changing it would change every page's URL.

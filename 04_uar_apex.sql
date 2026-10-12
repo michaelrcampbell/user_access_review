@@ -28,11 +28,11 @@ wwv_flow_imp.import_begin (
 end;
 /
 
-prompt APPLICATION 530 - Oracle User Access Review (Rebuild)
+prompt APPLICATION 530 - Oracle User Access Review V2
 --
 -- Application Export:
 --   Application:     530
---   Name:            Oracle User Access Review (Rebuild)
+--   Name:            Oracle User Access Review V2
 --   Date and Time:   00:00 Wednesday September 30, 2026
 --   Exported By:     MICHAEL.CAMPBELL
 --   Flashback:       0
@@ -73,7 +73,7 @@ begin
 wwv_imp_workspace.create_flow(
  p_id=>wwv_flow.g_flow_id
 ,p_owner=>nvl(wwv_flow_application_install.get_schema,'XXUAR')
-,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle User Access Review (Rebuild)')
+,p_name=>nvl(wwv_flow_application_install.get_application_name,'Oracle User Access Review V2')
 ,p_alias=>nvl(wwv_flow_application_install.get_application_alias,'UAR-REBUILD')
 ,p_page_view_logging=>'YES'
 ,p_page_protection_enabled_y_n=>'Y'
