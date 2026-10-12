@@ -144,7 +144,7 @@ wwv_flow_imp_shared.create_list_item(
  p_id=>wwv_flow_imp.id(9700000000000021)
 ,p_list_item_display_sequence=>10
 ,p_list_item_link_text=>'My Team Review'
-,p_list_item_link_target=>'f?p=&APP_ID.:1:&SESSION.::&DEBUG.::::'
+,p_list_item_link_target=>'f?p=&APP_ID.:1:&SESSION.::&DEBUG.:1:::'
 ,p_list_item_icon=>'fa-check-square-o'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
@@ -1892,6 +1892,7 @@ wwv_flow_imp_page.create_page_process(
 '      xxcti_uar_cycle_pkg.current_open_cycle,',
 '      :P3_REOPEN_MANAGER_ID',
 '   );',
+'   :P3_REOPEN_MANAGER_ID := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'

@@ -1004,3 +1004,22 @@ best-available data, not guaranteed-current, documented as such in the README.
 cycle's already-snapshotted rows stay null unless backfilled directly; gave the user a
 one-time UPDATE to run for that (not added to the repo as a tracked script, since it's a
 one-off data repair, not a reusable migration).
+
+## P3: two real bugs from user testing (2026-10-12)
+
+1. **Reopen dropdown showed a stale manager id after reopening.** The LOV itself was
+   already correct (inner join to `xxcti_uar_manager_signoffs`, which no longer has a row
+   for a just-reopened manager) -- what was stale was `P3_REOPEN_MANAGER_ID`'s own session
+   state. A plain `SUBMIT` doesn't reset an item's value, so it kept holding the manager's
+   raw id after the reopen ran, and the select-list widget fell back to showing that raw
+   value as text since it no longer matched any option in the refreshed LOV. Cleared the
+   item (`:P3_REOPEN_MANAGER_ID := null;`) at the end of the Reopen Submission process.
+
+2. **"My Team Review" nav link didn't reset an admin back to their own team.** After
+   viewing another manager's team (via the Manager Completion link added earlier), clicking
+   the main nav link kept `P1_MANAGER` at whatever value was last set -- plain session
+   state, nothing ever cleared it. Added `clear_cache=1` to the nav list item's link target
+   (the classic `f?p=` 6th segment -- same underlying mechanism as `p_clear_cache` on
+   `apex_page.get_url`, just via the syntax this nav list already uses), so navigating via
+   the main menu always resets P1's session state and the existing `BEFORE_HEADER` default
+   logic puts the admin back on their own team.
