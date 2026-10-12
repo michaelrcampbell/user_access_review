@@ -300,6 +300,17 @@ wwv_flow_imp_shared.create_theme(
 );
 end;
 /
+prompt --workspace/credentials/creation_apex_dev_pmo
+begin
+wwv_imp_workspace.create_credential(
+ p_id=>wwv_flow_imp.id(10878677230346892)
+,p_name=>'Creation APEX - DEV - PMO'
+,p_static_id=>'Creation_APEX_DEV_PMO'
+,p_authentication_type=>'BASIC'
+,p_prompt_on_install=>true
+);
+end;
+/
 prompt --application/shared_components/security/authentications/azure_ad_sso
 begin
 wwv_flow_imp_shared.create_authentication(

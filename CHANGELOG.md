@@ -1092,3 +1092,22 @@ after reimporting because of this specifically. If it breaks, the likely fix is 
 `wwv_imp_workspace.create_credential` call to this file too, matching PMO's by static id, so
 APEX's import matches/updates the existing workspace object instead of creating a disconnected
 one.
+
+## App Builder Import 400: declared the shared credential in this file too (2026-10-12)
+
+User confirmed wizard imports worked fine until the SSO scheme commit (`72f1a98`) -- matches
+the risk flagged in that commit's own message exactly. The referenced credential
+(`10878677230346892`, "Creation APEX - DEV - PMO") is created by PMO Hub's own import file
+under PMO's own `p_default_id_offset`; this file only referenced the same raw id under UAR's
+different offset, with no `create_credential` call of its own. SQL Scripts never cared (raw
+PL/SQL execution doesn't validate that a credential reference resolves to a real object) --
+the Import wizard apparently does, since credentials carry secrets.
+
+Added the same `wwv_imp_workspace.create_credential` call PMO Hub's file has, matching its
+`p_static_id` exactly, right before the authentication scheme that references it. APEX's
+import matches workspace-level objects by static id, so this should update/reuse the
+existing real credential rather than leave a dangling cross-file reference -- the same
+object either way, just now declared in both apps' files instead of only PMO's.
+
+Untested -- branch is for that test specifically (reimport via the App Builder wizard, not
+SQL Scripts).
