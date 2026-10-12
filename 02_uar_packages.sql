@@ -384,6 +384,27 @@ end;
 show errors
 
 -- ----------------------------------------------------------------------------
+-- SSO post-authentication hook. Standalone (not packaged), matching PMO Hub's
+-- xxcti_pmo_sso_post_auth -- APEX's "Post-Authentication Procedure Name" field
+-- on an authentication scheme expects a plain procedure name, and this is the
+-- proven-working shape for that. Unlike PMO Hub's version, this is a genuine
+-- no-op: UAR has no registration allow-list table and no login gate -- any
+-- authenticated account may open the app, scoped afterward by
+-- xxcti_uar_security_pkg.is_admin / resolve_employee_id as already happens
+-- today for native APEX accounts. Confirmed 2026-10-12 as the real cause of a
+-- PLS-00201 "must be declared" error: UAR's authentication scheme had been
+-- pointed directly at PMO Hub's xxcti_pmo_sso_post_auth, which doesn't exist
+-- in this schema. After running this, update the authentication scheme's
+-- Post-Authentication Procedure Name field to XXCTI_UAR_SSO_POST_AUTH.
+-- ----------------------------------------------------------------------------
+create or replace procedure xxcti_uar_sso_post_auth as
+begin
+    null;
+end xxcti_uar_sso_post_auth;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
 -- Standalone smoke tests -- run after seeding xxcti_uar_admins in
 -- 01_uar_schema_ddl.sql, before touching APEX at all.
 -- ----------------------------------------------------------------------------

@@ -1023,3 +1023,28 @@ one-off data repair, not a reusable migration).
    `apex_page.get_url`, just via the syntax this nav list already uses), so navigating via
    the main menu always resets P1's session state and the existing `BEFORE_HEADER` default
    logic puts the admin back on their own team.
+
+## SSO login error: wrong procedure, fixed with a minimal UAR-specific one (2026-10-12)
+
+User set up Azure AD SSO on UAR "like PMO Hub," which worked initially (an existing valid
+session/token was being reused) then failed with a generic APEX plug-in error on a fresh
+login. The real exception, from the APEX error log, was decisive:
+`PLS-00201: identifier 'XXCTI_PMO_SSO_POST_AUTH' must be declared` -- UAR's authentication
+scheme's Post-Authentication Procedure Name field was pointed directly at PMO Hub's existing
+procedure, which lives in PMO's schema and doesn't exist in UAR's.
+
+Confirmed with the user which fix was wanted: PMO's version also gates login entirely
+(rejects anyone not in `XXCTI_PMO_USERS`, a registration allow-list). UAR has no equivalent
+table or gate today, and the user confirmed they don't want one added as part of this fix --
+just the broken reference corrected. Added `xxcti_uar_sso_post_auth` to
+`02_uar_packages.sql` as a standalone procedure (not packaged, matching PMO's own proven
+shape, since APEX's config field expects a plain procedure name) that's a genuine no-op --
+nothing in it can fail, since there's no check to perform. Access stays scoped exactly as it
+already is for native APEX accounts, via `xxcti_uar_security_pkg`.
+
+**Still needs a manual step in the live instance** -- running the new procedure doesn't fix
+anything by itself. The authentication scheme's Post-Authentication Procedure Name field
+must be changed from `XXCTI_PMO_SSO_POST_AUTH` to `XXCTI_UAR_SSO_POST_AUTH`; that setting
+isn't in `04_uar_apex.sql` (UAR's authentication scheme there still shows
+`NATIVE_APEX_ACCOUNTS` -- SSO was configured directly in the live instance, outside this
+file, so the export doesn't yet reflect it).
