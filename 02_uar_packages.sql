@@ -202,24 +202,31 @@ create or replace package body xxcti_uar_cycle_pkg as
         );
 
         -- xxcti_uar_employee_responsibilities has no last_logon column (confirmed
-        -- against user_tab_columns 2026-09-28) -- the original app only ever
-        -- read last_logon from the old audit table, populated by some external
-        -- process not visible anywhere in the APEX export. Left null here until
-        -- a real source is identified; xxcti_uar_review_items still has the
-        -- column so nothing else needs to change if one turns up later.
+        -- against user_tab_columns 2026-09-28). The real source is the old MVP's
+        -- audit table (xxcti_uar_employee_responsibilities_audit), confirmed
+        -- 2026-10-12 to still carry last_logon by employee/responsibility/
+        -- application -- whether it's still actively refreshed by its external
+        -- process isn't confirmed, so treat this as best-available, not
+        -- guaranteed-current. A scalar MAX() subquery, not a join, so a
+        -- duplicate match in the audit table can't multiply snapshot rows.
         insert into xxcti_uar_review_items (
             review_item_id, cycle_id, employee_number, user_name,
-            responsibility, application, start_date, end_date
+            responsibility, application, start_date, end_date, last_logon
         )
         select xxcti_uar_review_item_id_seq.nextval,
                p_cycle_id,
-               employee_number,
-               user_name,
-               responsibility,
-               application,
-               start_date,
-               end_date
-          from xxcti_uar_employee_responsibilities;
+               er.employee_number,
+               er.user_name,
+               er.responsibility,
+               er.application,
+               er.start_date,
+               er.end_date,
+               (select max(aud.last_logon)
+                  from xxcti_uar_employee_responsibilities_audit aud
+                 where aud.employee_number = er.employee_number
+                   and aud.responsibility  = er.responsibility
+                   and aud.application     = er.application)
+          from xxcti_uar_employee_responsibilities er;
 
         commit;
     end open_cycle;

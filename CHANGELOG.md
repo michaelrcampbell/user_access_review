@@ -983,3 +983,24 @@ Instructions now open with "Click Edit above the list to start editing" -- the g
 read-only until that toolbar button is clicked (this app's confirmed, proven-matching-the-
 original behavior, not something to change), and nothing previously told the user that step
 was required.
+
+## last_logon: found the real source, wired into open_cycle (2026-10-12)
+
+User asked why P2's "Last Used" column was always blank and pointed at
+`xxcti_uar_employee_responsibilities_audit.last_logon` -- the old MVP's single mutable
+audit table, which this rebuild's `03_uar_migration_legacy_audit.sql` already reads from
+for the one-time historical import, but `open_cycle`'s ongoing snapshot never did. Confirmed
+the real column list (matches `03`'s existing inferred names exactly) and that the table's
+most recent `last_logon` is 2026-09-28 before changing anything, rather than assume.
+
+`xxcti_uar_cycle_pkg.open_cycle` now pulls `last_logon` via a scalar `MAX()` subquery
+(matching on employee_number/responsibility/application, not a join, so a duplicate match
+can't multiply snapshot rows) when snapshotting a newly-opened cycle. Whether the audit
+table is still actively refreshed by its external process isn't confirmed -- its freshest
+date lines up with when this rebuild started, which doesn't prove either way -- so this is
+best-available data, not guaranteed-current, documented as such in the README.
+
+**Not retroactive** -- only affects cycles opened after this change. The currently-open
+cycle's already-snapshotted rows stay null unless backfilled directly; gave the user a
+one-time UPDATE to run for that (not added to the repo as a tracked script, since it's a
+one-off data repair, not a reusable migration).

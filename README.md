@@ -105,9 +105,15 @@ instead, growing stage by stage as each prior stage is confirmed importing and w
 ## Confirmed schema facts (from live `user_tab_columns` checks, not the APEX export)
 
 - `xxcti_uar_employee_responsibilities` columns: `user_name`, `employee_number`,
-  `responsibility`, `application`, `start_date`, `end_date` — **no `last_logon`**. The
-  original app only ever read `last_logon` from the old audit table, which some
-  external/unseen process populated independently — its real source is still unknown.
+  `responsibility`, `application`, `start_date`, `end_date` — **no `last_logon`**.
+- `xxcti_uar_employee_responsibilities_audit` (the old MVP's single mutable table) columns
+  confirmed 2026-10-12: `APPLICATION`, `APPROVAL`, `APPROVAL_DATE`, `APPROVER`, `AUDIT_ID`,
+  `EMPLOYEE_NUMBER`, `END_DATE`, `LAST_LOGON`, `RESPONSIBILITY`, `START_DATE`, `USER_NAME`.
+  **This is `last_logon`'s real source** — `xxcti_uar_cycle_pkg.open_cycle` now pulls it via
+  a scalar `MAX()` match on employee/responsibility/application when snapshotting a new
+  cycle. Whether this table is still actively refreshed by its original external process
+  isn't confirmed (its most recent `last_logon` as of 2026-10-12 was 2026-09-28, right around
+  when this rebuild started) — treat the value as best-available, not guaranteed-current.
 
 ## Known gotchas to keep in mind once the APEX layer exists here
 
