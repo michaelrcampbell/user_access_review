@@ -892,6 +892,15 @@ wwv_flow_imp_page.create_page_item(
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'value_protected', 'Y')).to_clob
 );
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000000303)
+,p_name=>'P2_EMPLOYEE_NAME'
+,p_item_sequence=>25
+,p_item_plug_id=>wwv_flow_imp.id(9700000000000300)
+,p_display_as=>'NATIVE_HIDDEN'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'value_protected', 'Y')).to_clob
+);
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000310)
 ,p_process_sequence=>5
@@ -905,7 +914,16 @@ wwv_flow_imp_page.create_page_process(
 '',
 'if xxcti_uar_cycle_pkg.can_edit_item(:P2_EMPLOYEE_ID, :P2_CYCLE_ID) = ''N'' then',
 '   apex_util.redirect_url(apex_page.get_url(p_page => 1));',
-'end if;'))
+'end if;',
+'',
+'begin',
+'   select employee_legal_first_name || '' '' || employee_legal_last_name',
+'     into :P2_EMPLOYEE_NAME',
+'     from xxcti_uar_workday_employee_mgr',
+'    where to_char(employee_id) = :P2_EMPLOYEE_ID;',
+'exception when no_data_found then',
+'   :P2_EMPLOYEE_NAME := :P2_EMPLOYEE_ID;',
+'end;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000310
 );
@@ -916,10 +934,14 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''<strong>How to complete this review:</strong> For each access item below, review the '');',
+'htp.p(''Reviewing: <strong>'' || apex_escape.html(:P2_EMPLOYEE_NAME) || ''</strong>'');',
+'htp.p(''<br><strong>How to complete this review:</strong> For each access item below, review the '');',
 'htp.p(''responsibility and application listed, then click <strong>Approve</strong> or '');',
 'htp.p(''<strong>Deny</strong>. Approve saves immediately. Deny opens a short form requiring a '');',
 'htp.p(''comment explaining why, before it saves.'');',
+'htp.p(''When finished with this employee, click <strong>Back to My Team</strong> above to '');',
+'htp.p(''continue reviewing your other employees and submit your review once every item is '');',
+'htp.p(''complete.'');',
 'htp.p(''</div>'');'))
 );
 wwv_flow_imp_page.create_page_plug(

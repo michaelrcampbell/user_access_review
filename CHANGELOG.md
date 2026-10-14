@@ -1295,3 +1295,18 @@ not another report-region HTML-escaping workaround. The bar's fill color is comp
 rather than discrete buckets, since the user asked for color that changes "as progress
 increases." Kept the same plug id (`9700000000000270`) since `P1_CAN_SUBMIT` and the
 `SUBMIT_REVIEW` button are both parented to this region and needed no changes themselves.
+
+## P2: show which employee is being reviewed, instructions point back to P1 (2026-10-13)
+
+P2 had no on-page indication of which employee's access was being reviewed — just a
+generic "Employee Review" title and a hidden `P2_EMPLOYEE_ID`. Added `P2_EMPLOYEE_NAME`
+(hidden, populated in the existing `BEFORE_HEADER` ownership-check process via a lookup
+against `xxcti_uar_workday_employee_mgr` keyed on `P2_EMPLOYEE_ID`, with a fallback to the
+raw id if the lookup finds nothing) and a "Reviewing: **Name**" line at the top of
+`P2_INSTRUCTIONS`, escaped via `apex_escape.html` the same way `P1_GREETING` already escapes
+the logged-in user's name.
+
+Also added a closing line to `P2_INSTRUCTIONS` telling the manager to click **Back to My
+Team** (the existing button's actual label) to continue reviewing other employees and submit
+once every item is complete — per user request, since the instructions previously only
+covered this one employee's page and never said where to go next.
