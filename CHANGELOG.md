@@ -1310,3 +1310,27 @@ Also added a closing line to `P2_INSTRUCTIONS` telling the manager to click **Ba
 Team** (the existing button's actual label) to continue reviewing other employees and submit
 once every item is complete — per user request, since the instructions previously only
 covered this one employee's page and never said where to go next.
+
+## P2: employee name as the page header, preserve scroll position (2026-10-13)
+
+The "Reviewing: Name" line added earlier got lost inside the instructions banner, easy to
+miss. Moved it to where it's actually prominent: the Hero region's own title, which was a
+static "Employee Review" — now `'&P2_EMPLOYEE_NAME.''s Access Review'`, using APEX's
+standard substitution-string syntax in a region title (a basic, long-standing APEX feature,
+not an internal import-API parameter, so this doesn't carry the same risk as the guesses
+that broke earlier imports this session). `P2_EMPLOYEE_NAME` is already populated by the
+page's `BEFORE_HEADER` process, which runs before the title renders, so the value is set in
+time. Removed the now-redundant line from `P2_INSTRUCTIONS`.
+
+Also fixed: clicking Approve or Deny on a long list scrolled back to the top every time,
+forcing the manager to re-find their place. Both actions cause a full page
+reload/navigation (Approve submits the page; Deny navigates to Page 8 and back), which
+resets scroll natively — there's no AJAX-partial-refresh precedent anywhere in this app to
+reach for instead. Fixed client-side only, no new PL/SQL API surface: `uarSaveScrollPos()`
+stores `window.scrollY` in `sessionStorage` before the action fires (added to both
+`uarApproveItem()` and the Deny link's `onclick`), and a `window.addEventListener("load", ...)`
+in the same script restores and clears it on the next page load. Known minor edge case: since
+`sessionStorage` isn't scoped per employee, a stale position could in theory carry over if a
+manager leaves mid-review and returns to a *different* employee's page before ever reaching a
+fresh load without a pending saved position — considered minor enough not to engineer around
+unless it turns out to be noticeable in practice.

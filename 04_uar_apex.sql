@@ -866,7 +866,7 @@ wwv_flow_imp_page.create_page_plug(
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000300)
 ,p_plug_name=>'P2_EMPLOYEE_REVIEW'
-,p_title=>'Employee Review'
+,p_title=>'&P2_EMPLOYEE_NAME.''s Access Review'
 ,p_icon_css_classes=>'fa-lg fa-list-ul'
 ,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
 ,p_plug_template=>2674017834225413037
@@ -934,8 +934,7 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''Reviewing: <strong>'' || apex_escape.html(:P2_EMPLOYEE_NAME) || ''</strong>'');',
-'htp.p(''<br><strong>How to complete this review:</strong> For each access item below, review the '');',
+'htp.p(''<strong>How to complete this review:</strong> For each access item below, review the '');',
 'htp.p(''responsibility and application listed, then click <strong>Approve</strong> or '');',
 'htp.p(''<strong>Deny</strong>. Approve saves immediately. Deny opens a short form requiring a '');',
 'htp.p(''comment explaining why, before it saves.'');',
@@ -1047,7 +1046,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>6
 ,p_column_identifier=>'F'
 ,p_column_label=>' '
-,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" href="#DENY_URL#">Deny</a></span>'
+,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a></span>'
 ,p_column_type=>'STRING'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
@@ -1110,10 +1109,21 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<script>'');',
+'htp.p(''function uarSaveScrollPos(){'');',
+'htp.p(''  sessionStorage.setItem("uar_scroll_pos", window.scrollY);'');',
+'htp.p(''}'');',
 'htp.p(''function uarApproveItem(id){'');',
+'htp.p(''  uarSaveScrollPos();'');',
 'htp.p(''  apex.item("P2_ACTION_ITEM_ID").setValue(id);'');',
 'htp.p(''  apex.submit("APPROVE_ITEM");'');',
 'htp.p(''}'');',
+'htp.p(''window.addEventListener("load", function(){'');',
+'htp.p(''  var pos = sessionStorage.getItem("uar_scroll_pos");'');',
+'htp.p(''  if (pos !== null) {'');',
+'htp.p(''    window.scrollTo(0, parseInt(pos, 10));'');',
+'htp.p(''    sessionStorage.removeItem("uar_scroll_pos");'');',
+'htp.p(''  }'');',
+'htp.p(''});'');',
 'htp.p(''</script>'');'))
 );
 wwv_flow_imp_page.create_page_process(
