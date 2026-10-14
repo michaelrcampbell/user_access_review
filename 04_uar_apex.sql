@@ -953,19 +953,17 @@ wwv_flow_imp_page.create_page_plug(
 '       ri.last_logon,',
 '       nvl(ri.approval, ''Pending'') as approval_display,',
 '       ri.comments,',
-'       case',
-'         when xxcti_uar_cycle_pkg.can_edit_item(ri.employee_number, ri.cycle_id) = ''N'' then',
-'           ''<span style="color:#888;">Locked</span>''',
-'         else',
-'           ''<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="uarApproveItem('' || ri.review_item_id || '')">Approve</button> '' ||',
-'           ''<a class="t-Button t-Button--small t-Button--warning" href="'' ||',
-'             apex_page.get_url(',
-'                p_page => 8,',
-'                p_items => ''P8_REVIEW_ITEM_ID,P8_RETURN_EMPLOYEE_ID,P8_RETURN_CYCLE_ID'',',
-'                p_values => ri.review_item_id || '','' || :P2_EMPLOYEE_ID || '','' || :P2_CYCLE_ID,',
-'                p_clear_cache => ''8''',
-'             ) || ''">Deny</a>''',
-'       end as actions',
+'       ri.review_item_id,',
+'       apex_page.get_url(',
+'          p_page => 8,',
+'          p_items => ''P8_REVIEW_ITEM_ID,P8_RETURN_EMPLOYEE_ID,P8_RETURN_CYCLE_ID'',',
+'          p_values => ri.review_item_id || '','' || :P2_EMPLOYEE_ID || '','' || :P2_CYCLE_ID,',
+'          p_clear_cache => ''8''',
+'       ) as deny_url,',
+'       case when xxcti_uar_cycle_pkg.can_edit_item(ri.employee_number, ri.cycle_id) = ''N''',
+'            then ''inline'' else ''none'' end as locked_display,',
+'       case when xxcti_uar_cycle_pkg.can_edit_item(ri.employee_number, ri.cycle_id) = ''N''',
+'            then ''none'' else ''inline'' end as unlocked_display',
 '  from xxcti_uar_review_items ri',
 ' where ri.employee_number = :P2_EMPLOYEE_ID',
 '   and ri.cycle_id = :P2_CYCLE_ID',
@@ -1040,13 +1038,46 @@ wwv_flow_imp_page.create_worksheet_column(
 );
 wwv_flow_imp_page.create_worksheet_column(
  p_id=>wwv_flow_imp.id(9700000000000326)
-,p_db_column_name=>'ACTIONS'
+,p_db_column_name=>'REVIEW_ITEM_ID'
 ,p_display_order=>6
 ,p_column_identifier=>'F'
 ,p_column_label=>' '
-,p_column_html_expression=>'#ACTIONS#'
+,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#"><button type="button" class="t-Button t-Button--small t-Button--hot" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--warning" href="#DENY_URL#">Deny</a></span>'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000000342)
+,p_db_column_name=>'DENY_URL'
+,p_display_order=>97
+,p_column_identifier=>'G'
+,p_column_label=>'Deny URL'
 ,p_column_type=>'STRING'
-,p_heading_alignment=>'LEFT'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000000343)
+,p_db_column_name=>'LOCKED_DISPLAY'
+,p_display_order=>98
+,p_column_identifier=>'H'
+,p_column_label=>'Locked Display'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000000344)
+,p_db_column_name=>'UNLOCKED_DISPLAY'
+,p_display_order=>99
+,p_column_identifier=>'I'
+,p_column_label=>'Unlocked Display'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
@@ -1057,7 +1088,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar2rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:COMMENTS:ACTIONS'
+,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:COMMENTS:REVIEW_ITEM_ID:DENY_URL:LOCKED_DISPLAY:UNLOCKED_DISPLAY'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000395)

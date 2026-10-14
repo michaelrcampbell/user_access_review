@@ -1207,3 +1207,25 @@ copying a parameter with no precedent on the actual call being made. Removed bot
 `create_worksheet` now matches `P1_EMPLOYEES`'s already-working signature exactly. The
 toolbar will show by default until a real IR-toolbar-hiding mechanism is found and verified —
 not attempted again without precedent this time.
+
+**Correction (2026-10-13, third time):** import succeeded, but the Approve/Deny markup
+still rendered as escaped text. Root cause: `p_column_html_expression` escapes the
+*substituted value*, not the template's own literal text — `P1_EMPLOYEES`'s working example
+(`'<a href="#EMPLOYEE_URL#">#EMPLOYEE_ID#</a>'`) never actually tested this, because
+`EMPLOYEE_URL`/`EMPLOYEE_ID` are a plain URL and a number with no markup in them to escape.
+My `'#ACTIONS#'` column asked APEX to substitute a value that *was itself* the full
+`<button>`/`<a>` markup, computed in SQL — exactly the thing html_expression escapes to
+prevent XSS from dynamic data. There is no way to turn that off.
+
+Fixed by flipping which part is literal and which is substituted: the full button/link HTML
+is now literal text inside the `p_column_html_expression` parameter itself (on the
+`REVIEW_ITEM_ID` column, reusing the same "carrier column" trick `P1_EMPLOYEES` uses), and
+only plain, safe values are substituted into it — `#REVIEW_ITEM_ID#` (a number),
+`#DENY_URL#` (a URL; its `&` query separators become `&amp;` when escaped, which is the
+*correct* encoding inside an `href` attribute anyway, not a bug), and `#LOCKED_DISPLAY#`/
+`#UNLOCKED_DISPLAY#` (plain words `'inline'`/`'none'` driving a CSS `display:` toggle instead
+of trying to conditionally swap HTML — plain alphanumeric text passes through escaping
+unchanged either way, so this sidesteps the whole problem instead of fighting it). Three new
+hidden (`HIDDEN_ESCAPE_SC`) helper columns carry `DENY_URL`/`LOCKED_DISPLAY`/
+`UNLOCKED_DISPLAY`; the SQL source now returns only plain values, no HTML. Still untested
+after this fix.
