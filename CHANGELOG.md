@@ -1268,3 +1268,16 @@ Still untested after these four fixes.
   region narrows everything inside it, fields and buttons alike, in one rule.
 
 Still untested after this round.
+
+## P2: clear stale denial comment on re-approval, update instructions (2026-10-13)
+
+If an item was Denied (with a comment) and the manager then clicks Approve on it, the
+"Approve Item" process now also sets `comments = null` — otherwise the old denial rationale
+would stick around on an approved item, which reads as leftover/contradictory. Allowed by
+the `xxcti_uar_review_items_auth` trigger's comment rule, which only requires a non-null
+comment when `approval = 'Denied'`.
+
+Also rewrote `P2_INSTRUCTIONS` to describe the current button-based flow (Approve/Deny per
+row, Deny opening a form requiring a comment) — the old text still referenced the removed
+Interactive Grid's "Click Edit" / "double-click in the Approval cell" workflow and the
+select-list dropdown, both gone since this feature replaced them.

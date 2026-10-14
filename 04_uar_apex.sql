@@ -931,12 +931,10 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''<strong>How to complete this review:</strong> Click <strong>Edit</strong> above the '');',
-'htp.p(''list to start editing (or double-click in the Approval cell). For each access item '');',
-'htp.p(''below, review the responsibility and '');',
-'htp.p(''application listed, then mark it <strong>Approved</strong> or <strong>Denied</strong> '');',
-'htp.p(''in the Approval column. Add a comment if you deny an item or need to explain your '');',
-'htp.p(''decision, then click <strong>Save</strong>.'');',
+'htp.p(''<strong>How to complete this review:</strong> For each access item below, review the '');',
+'htp.p(''responsibility and application listed, then click <strong>Approve</strong> or '');',
+'htp.p(''<strong>Deny</strong>. Approve saves immediately. Deny opens a short form requiring a '');',
+'htp.p(''comment explaining why, before it saves.'');',
 'htp.p(''</div>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
@@ -1120,7 +1118,8 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''APPROVE_ITEM'' then',
 '   update xxcti_uar_review_items',
-'      set approval = ''Approved''',
+'      set approval = ''Approved'',',
+'          comments = null',
 '    where review_item_id = :P2_ACTION_ITEM_ID',
 '      and employee_number = :P2_EMPLOYEE_ID',
 '      and cycle_id = :P2_CYCLE_ID;',
