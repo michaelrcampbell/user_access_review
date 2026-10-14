@@ -1095,6 +1095,8 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_sequence=>30
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000300)
 ,p_display_as=>'NATIVE_HIDDEN'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'value_protected', 'N')).to_clob
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000396)
@@ -2291,7 +2293,7 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<style>'');',
-'htp.p(''#P8_RESPONSIBILITY_DISPLAY,#P8_APPLICATION_DISPLAY,#P8_COMMENTS{max-width:50ch;}'');',
+'htp.p(''.t-Region:has(#P8_COMMENTS){max-width:50ch;}'');',
 'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_item(

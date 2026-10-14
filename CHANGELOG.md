@@ -1252,3 +1252,19 @@ issues reported from the live page:
   being made.
 
 Still untested after these four fixes.
+
+**Follow-up (2026-10-13, continued):** two of the four weren't actually fixed.
+- Session state protection still fired on Approve. Every `value_protected` usage in both this
+  app's and PMO Hub's export files sets it explicitly to `'Y'` or `'N'` — none omit the
+  attribute. Dropping it entirely (the previous fix) apparently doesn't reliably default to
+  unprotected. Set it explicitly to `'N'` on `P2_ACTION_ITEM_ID` instead of omitting it.
+- P8's `max-width:50ch` on the three individual fields didn't shrink the page — the fields'
+  *containers* were still full-width, and the region holding the Confirm Deny button isn't
+  tied to any one item's CSS at all. Replaced the per-field rule with
+  `.t-Region:has(#P8_COMMENTS){max-width:50ch;}` — `.t-Region` is Universal Theme's standard,
+  stable region wrapper class, and `:has()` lets the single known item id (`#P8_COMMENTS`,
+  reliable since an item's name is always its DOM id in APEX) select its *ancestor* region
+  without needing to guess a region-level id or any new PL/SQL parameter. Narrowing the
+  region narrows everything inside it, fields and buttons alike, in one rule.
+
+Still untested after this round.
