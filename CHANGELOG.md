@@ -1116,3 +1116,67 @@ SQL Scripts).
 
 Added "(or double-click in the Approval cell)" after the Edit-button instruction, per user
 request.
+
+## P2 approval UX: Approve/Deny buttons replace the editable grid (2026-10-13)
+
+First attempt at a friendlier approval UX was a `NATIVE_YES_NO` ("Switch") column on the
+existing Interactive Grid, in place of the select-list dropdown. Built and tested on branch
+`feature/approval-switch` (commit `e428287`) — rejected by the user: the switch only
+rendered its real widget once a cell was clicked/focused, and the collapsed/unfocused cell
+showed generic "On"/"Off" text instead of the custom `Approved`/`Denied` labels. Reverted
+(`git branch -D feature/approval-switch`) without merging; no functional change from that
+attempt survives on master.
+
+Replaced instead with the design the user proposed directly: a static-looking report with
+one-click "Approve" and "Deny" buttons per row, where Deny opens a page requiring a mandatory
+comment before it saves. The Interactive Grid on P2 (`P2_RESPONSIBILITY`, plug id
+`9700000000000320`) is now a classic/static `create_report_region` (`NATIVE_SQL_REPORT`)
+instead — same plug id, so `P2_BACK_BUTTON`'s existing reference needed no change. The old
+`NATIVE_IG_DML` save process (id `9700000000000370`) is removed; there's no longer a grid to
+save, since each action commits immediately.
+
+Row-level HTML (the Approve button, the Deny link, and a "Locked" span for items the manager
+can no longer edit) renders via `p_plug_query_strip_html=>'N'` on the region — already
+precedented 3x elsewhere in this exact file (`P1_PROGRESS`, `P3_CYCLES`, `P7_ADMINS`), this
+is the classic-report region attribute ("Strip HTML") that turns off escaping so a column's
+raw `<button>`/`<a>` text renders instead of showing as literal text. Confirmed before
+building: whether this mechanism actually works was *not* guessed — PMO Hub's own precedent
+for row-level buttons/cards is `htp.p()` output in a `NATIVE_PLSQL` region, a different
+(heavier) mechanism used there because PMO's cards need custom grouping/layout beyond a
+plain tabular report; it doesn't indicate strip-HTML doesn't work for a simple per-row button,
+and this file's own three existing uses of the attribute confirm it's the established
+in-repo pattern.
+
+Approve is instant: a small `NATIVE_PLSQL` script region emits
+`uarApproveItem(id)` (`apex.item('P2_ACTION_ITEM_ID').setValue(id); apex.submit('APPROVE_ITEM')`)
+— the same `apex.item().setValue()` + `apex.submit()` shape already used by this app's
+confirm-dialog DA buttons — and a new `AFTER_SUBMIT` process updates the row and commits.
+
+Deny navigates to a new **Page 8 "Deny Item"**, since grepping PMO Hub's entire export for
+`DIALOG_CLOSED`/"Dialog Closed" turned up zero matches — PMO's own "modal" forms are full
+page redirects, not true AJAX dialogs, so Page 8 is built the same way: a real page, gated on
+load by the same `can_review` + `can_edit_item` checks P2 itself uses, with a required
+`P8_COMMENTS` textarea, a `CONFIRM_DENY` process that updates the row (`comment` +
+`'Denied'`), commits, and redirects back to P2 with the employee/cycle context carried via
+`apex_page.get_url`, and a `CANCEL` button that redirects back the same way without saving.
+Considered and dropped PMO's drawer-style slide-in panel template
+(`p_step_template`/`js-dialog-class-t-Drawer--pullOutEnd`) — that specific template id has no
+precedent anywhere in this file (only one page here sets `p_step_template` at all, to a
+different value), and hand-copying a template id between apps is the exact
+`p_required_patch`-style mistake this project has been burned by before. Page 8 instead uses
+this app's own default page template, same as every other page here.
+
+Caught and fixed during mechanical review before commit (not during a live import attempt):
+the new report region had copied `p_template` and `p_region_template_options` values from
+P1's Interactive-Report-based employee list instead of from this file's own classic-report
+precedent — fixed to match `P1_PROGRESS`/`P3_CYCLES`/`P7_ADMINS` exactly
+(`p_template=>4072358936313175081`, `p_region_template_options=>'#DEFAULT#'`).
+
+Known scope gap, not yet addressed: a comment can now only be added via the Deny flow —
+there's no path to attach an optional comment to an already-Approved item, unlike the old
+dropdown design. Flagged for the user as a possible follow-up, not fixed here.
+
+Untested — needs a real import and manual test of: Approve (instant, no page change), Deny
+(Page 8 loads, requires a comment, saves, redirects back to P2), Locked display (cycle closed
+or manager already submitted shows "Locked" instead of buttons), and that `P2_BACK_BUTTON`
+still renders correctly now that its parent region changed type.
