@@ -1180,3 +1180,20 @@ Untested — needs a real import and manual test of: Approve (instant, no page c
 (Page 8 loads, requires a comment, saves, redirects back to P2), Locked display (cycle closed
 or manager already submitted shows "Locked" instead of buttons), and that `P2_BACK_BUTTON`
 still renders correctly now that its parent region changed type.
+
+**Correction (2026-10-13):** tested and the Approve/Deny markup rendered as literal escaped
+text (`&lt;button...`), not real buttons. `p_plug_query_strip_html=>'N'` turned out not to be
+the right mechanism — it's a `create_report_region` (classic report) attribute, and classic
+reports have no per-column way to disable escaping at all (confirmed by checking
+`create_report_columns`'s real parameter list in the original app 104 export and a fresh Page
+Designer test export — no escape-control parameter exists there). The actual in-repo
+precedent for raw per-row HTML is `p_column_html_expression` on `create_worksheet_column`,
+which only exists on Interactive Report regions (`p_plug_source_type=>'NATIVE_IR'`) — already
+proven working in this exact app on `P1_EMPLOYEES`'s employee-link column. Rebuilt
+`P2_RESPONSIBILITY` as an IR on that same pattern: the SQL is unchanged, the `ACTIONS`
+column's own `html_expression` is `'#ACTIONS#'` (a column referencing its own placeholder
+bypasses the default escaping, same technique `P1_EMPLOYEES` uses with
+`EMPLOYEE_URL`/`EMPLOYEE_ID`), and `p_show_toolbar=>false` on the new `create_worksheet` call
+keeps the static, toolbar-free look the user asked for. Added the `create_worksheet_rpt`
+default-report declaration this requires — a previously logged gotcha (new IR columns
+silently don't render without one) applies here too. Still untested after this fix.
