@@ -517,7 +517,7 @@ wwv_flow_imp_page.create_page_plug(
 '         end if;',
 '',
 '         htp.p(''<div class="uar-due-banner" style="margin:0 0 16px;font-size:1rem;">'');',
-'         htp.p(''Current review cycle due: <strong>'' || to_char(l_due_date,''Mon DD, YYYY'') || ''</strong>'');',
+'         htp.p(''Complete Review By: <strong>'' || to_char(l_due_date,''Mon DD, YYYY'') || ''</strong>'');',
 '         htp.p('' &mdash; <strong style="color:'' || l_color || '';">'' || l_label || ''</strong>'');',
 '         htp.p(''</div>'');',
 '      end if;',
@@ -581,59 +581,44 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>1700000000000260
 );
-wwv_flow_imp_page.create_report_region(
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000270)
-,p_name=>'P1_PROGRESS'
+,p_plug_name=>'P1_PROGRESS'
 ,p_title=>'Review Progress'
-,p_template=>4072358936313175081
-,p_display_sequence=>20
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>20
 ,p_region_template_options=>'#DEFAULT#'
 ,p_component_template_options=>'#DEFAULT#:t-Report--stretch'
-,p_source_type=>'NATIVE_SQL_REPORT'
-,p_query_type=>'SQL'
-,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'select total_items, completed_items, pct_complete',
-'from xxcti_uar_cycle_progress',
-'where cycle_id = :P1_CYCLE_ID',
-'  and manager_id = :P1_MANAGER'))
-,p_ajax_enabled=>'Y'
-,p_lazy_loading=>false
-,p_query_row_template=>2538654340625403440
-,p_query_num_rows=>1
-,p_query_options=>'DERIVED_REPORT_COLUMNS'
-,p_query_no_data_found=>'No items to review yet for this cycle.'
-,p_sort_null=>'L'
-,p_plug_query_strip_html=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000271)
-,p_query_column_id=>1
-,p_column_alias=>'TOTAL_ITEMS'
-,p_column_display_sequence=>1
-,p_column_heading=>'Total Items'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000272)
-,p_query_column_id=>2
-,p_column_alias=>'COMPLETED_ITEMS'
-,p_column_display_sequence=>2
-,p_column_heading=>'Completed'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
-,p_derived_column=>'N'
-);
-wwv_flow_imp_page.create_report_columns(
- p_id=>wwv_flow_imp.id(9700000000000273)
-,p_query_column_id=>3
-,p_column_alias=>'PCT_COMPLETE'
-,p_column_display_sequence=>3
-,p_column_heading=>'% Complete'
-,p_column_alignment=>'RIGHT'
-,p_heading_alignment=>'RIGHT'
-,p_derived_column=>'N'
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_total     number;',
+'   l_completed number;',
+'   l_pct       number;',
+'   l_hue       number;',
+'begin',
+'   begin',
+'      select total_items, completed_items, pct_complete',
+'        into l_total, l_completed, l_pct',
+'        from xxcti_uar_cycle_progress',
+'       where cycle_id = :P1_CYCLE_ID',
+'         and manager_id = :P1_MANAGER;',
+'   exception when no_data_found then',
+'      l_total := null;',
+'   end;',
+'',
+'   if l_total is null then',
+'      htp.p(''No items to review yet for this cycle.'');',
+'   else',
+'      l_hue := round(nvl(l_pct, 0) * 1.2);',
+'      htp.p(''<div style="margin:0 0 4px;font-size:.9rem;">'' || l_completed || '' of '' || l_total ||',
+'            '' items reviewed ('' || round(nvl(l_pct,0)) || ''%)</div>'');',
+'      htp.p(''<div style="background:#E2E2E2;border-radius:6px;height:18px;width:100%;overflow:hidden;">'');',
+'      htp.p(''<div style="background:hsl('' || l_hue || '',70%,45%);height:100%;width:'' ||',
+'            round(nvl(l_pct,0)) || ''%;transition:width .3s;"></div>'');',
+'      htp.p(''</div>'');',
+'   end if;',
+'end;'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000261)

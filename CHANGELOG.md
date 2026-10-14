@@ -1281,3 +1281,17 @@ Also rewrote `P2_INSTRUCTIONS` to describe the current button-based flow (Approv
 row, Deny opening a form requiring a comment) — the old text still referenced the removed
 Interactive Grid's "Click Edit" / "double-click in the Approval cell" workflow and the
 select-list dropdown, both gone since this feature replaced them.
+
+## P1: due-date label and a graphical progress bar (2026-10-13)
+
+"Current review cycle due:" renamed to "Complete Review By:" per user request.
+
+Replaced `P1_PROGRESS`'s three-column classic report (Total Items / Completed / % Complete)
+with a single red-to-green progress bar. Given the escaping problems worked through earlier
+today on P2, this was built directly as a `NATIVE_PLSQL` region using `htp.p()` output (the
+same, already-proven technique as `P1_INSTRUCTIONS`/`P1_CYCLE_DUE_INFO` on this same page),
+not another report-region HTML-escaping workaround. The bar's fill color is computed as
+`hsl(pct_complete * 1.2, 70%, 45%)` — a continuous hue sweep from red (0%) to green (100%)
+rather than discrete buckets, since the user asked for color that changes "as progress
+increases." Kept the same plug id (`9700000000000270`) since `P1_CAN_SUBMIT` and the
+`SUBMIT_REVIEW` button are both parented to this region and needed no changes themselves.
