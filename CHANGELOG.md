@@ -1197,3 +1197,13 @@ bypasses the default escaping, same technique `P1_EMPLOYEES` uses with
 keeps the static, toolbar-free look the user asked for. Added the `create_worksheet_rpt`
 default-report declaration this requires — a previously logged gotcha (new IR columns
 silently don't render without one) applies here too. Still untested after this fix.
+
+**Correction (2026-10-13, again):** import failed — `ORA-06550 ... PLS-00306: wrong number or
+types of arguments in call to 'CREATE_WORKSHEET'`. Had added `p_show_toolbar`/
+`p_toolbar_buttons` to the new `create_worksheet` call to hide the IR's toolbar for a static
+look; those two params actually belong to `create_interactive_grid` (confirmed in the
+original app 104 export) and don't exist on `create_worksheet` at all — another case of
+copying a parameter with no precedent on the actual call being made. Removed both;
+`create_worksheet` now matches `P1_EMPLOYEES`'s already-working signature exactly. The
+toolbar will show by default until a real IR-toolbar-hiding mechanism is found and verified —
+not attempted again without precedent this time.

@@ -977,8 +977,6 @@ wwv_flow_imp_page.create_worksheet(
 ,p_max_row_count=>'500'
 ,p_pagination_type=>'ROWS_X_TO_Y'
 ,p_pagination_display_pos=>'BOTTOM_RIGHT'
-,p_show_toolbar=>false
-,p_toolbar_buttons=>null
 ,p_report_list_mode=>'TABS'
 ,p_lazy_loading=>false
 ,p_show_detail_link=>'N'
