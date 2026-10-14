@@ -1042,9 +1042,8 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>6
 ,p_column_identifier=>'F'
 ,p_column_label=>' '
-,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#"><button type="button" class="t-Button t-Button--small t-Button--hot" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--warning" href="#DENY_URL#">Deny</a></span>'
-,p_column_type=>'NUMBER'
-,p_column_alignment=>'RIGHT'
+,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" href="#DENY_URL#">Deny</a></span>'
+,p_column_type=>'STRING'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
@@ -1096,8 +1095,6 @@ wwv_flow_imp_page.create_page_item(
 ,p_item_sequence=>30
 ,p_item_plug_id=>wwv_flow_imp.id(9700000000000300)
 ,p_display_as=>'NATIVE_HIDDEN'
-,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
-  'value_protected', 'Y')).to_clob
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000396)
@@ -2286,6 +2283,16 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_template=>4072358936313175081
 ,p_plug_display_sequence=>10
 ,p_location=>null
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000000912)
+,p_plug_name=>'P8_FIELD_WIDTH_CSS'
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''#P8_RESPONSIBILITY_DISPLAY,#P8_APPLICATION_DISPLAY,#P8_COMMENTS{max-width:50ch;}'');',
+'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000903)

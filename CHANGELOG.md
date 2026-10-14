@@ -1229,3 +1229,26 @@ unchanged either way, so this sidesteps the whole problem instead of fighting it
 hidden (`HIDDEN_ESCAPE_SC`) helper columns carry `DENY_URL`/`LOCKED_DISPLAY`/
 `UNLOCKED_DISPLAY`; the SQL source now returns only plain values, no HTML. Still untested
 after this fix.
+
+**Follow-up fixes after live testing (2026-10-13):** markup now rendered correctly; four
+issues reported from the live page:
+- Clicking Approve threw "Session state protection violation" on `P2_ACTION_ITEM_ID`.
+  Removed `value_protected=>'Y'` from that item — it's intentionally overwritten by
+  `uarApproveItem()`'s own JS before submit, and session state protection exists to catch
+  exactly that kind of client-side change, so the two are fundamentally incompatible for an
+  item used this way.
+- Approve/Deny colors: `t-Button--hot`/`t-Button--warning` replaced with the standard
+  Universal Theme semantic classes `t-Button--success` (green) and `t-Button--danger` (red,
+  already precedented in PMO Hub's own "Remove" button).
+- Button column too wide: changed the carrier column (`REVIEW_ITEM_ID`) from
+  `NUMBER`/`RIGHT`-aligned to plain `STRING` with no alignment override, and added
+  `white-space:nowrap` to the html_expression's own wrapper spans, so the column shrinks to
+  its actual content width instead of reserving numeric-column space.
+- P8 fields stretching to full page width: added a small `NATIVE_PLSQL` region emitting a
+  `<style>` block that caps `#P8_RESPONSIBILITY_DISPLAY`/`#P8_APPLICATION_DISPLAY`/
+  `#P8_COMMENTS` at `max-width:50ch` — using the page item's own name as its DOM id, which is
+  always true in APEX, rather than guessing another internal sizing parameter after getting
+  burned twice already in this same feature by parameters that didn't exist on the call
+  being made.
+
+Still untested after these four fixes.
