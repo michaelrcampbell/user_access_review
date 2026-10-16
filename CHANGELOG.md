@@ -1375,3 +1375,14 @@ Separately: editing an already-Denied item's reason showed a blank comment box, 
 Page 8's context-loading query only ever selected `responsibility`/`application`. It now
 also selects the existing `comments` into `P8_COMMENTS`, so reopening Deny on an item that
 already has a reason shows it instead of starting blank.
+
+**Correction (2026-10-16):** the CSS `nth-child(5)` fix for the action column's width/sort
+didn't take. Most likely cause: APEX's Interactive Report render may inject a leading column
+of its own (a row-selector or similar) even with the toolbar hidden, shifting every visible
+column's actual DOM position one or more places from what the declared `p_display_order`
+values would suggest — meaning `nth-child(5)` was quietly targeting the wrong column instead
+of erroring. Replaced the whole CSS approach with JS that finds the real position instead of
+assuming one: it locates the first `.uar-actions-cell` marker in the table, walks up to its
+`<td>`, computes that cell's *actual* child index at runtime, then applies the width/no-sort
+styling to the `<th>`/`<td>`s at that same index. This is self-correcting regardless of any
+extra columns APEX renders that aren't in the declared column list.
