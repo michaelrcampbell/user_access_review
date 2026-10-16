@@ -967,7 +967,8 @@ wwv_flow_imp_page.create_page_plug(
 '       case when xxcti_uar_cycle_pkg.can_edit_item(ri.employee_number, ri.cycle_id) = ''N''',
 '            then ''inline'' else ''none'' end as locked_display,',
 '       case when xxcti_uar_cycle_pkg.can_edit_item(ri.employee_number, ri.cycle_id) = ''N''',
-'            then ''none'' else ''inline'' end as unlocked_display',
+'            then ''none'' else ''inline'' end as unlocked_display,',
+'       case when ri.approval is not null then ''inline'' else ''none'' end as undo_display',
 '  from xxcti_uar_review_items ri',
 ' where ri.employee_number = :P2_EMPLOYEE_ID',
 '   and ri.cycle_id = :P2_CYCLE_ID',
@@ -1030,24 +1031,24 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_use_as_row_header=>'N'
 );
 wwv_flow_imp_page.create_worksheet_column(
- p_id=>wwv_flow_imp.id(9700000000000325)
-,p_db_column_name=>'COMMENTS'
+ p_id=>wwv_flow_imp.id(9700000000000326)
+,p_db_column_name=>'REVIEW_ITEM_ID'
 ,p_display_order=>5
-,p_column_identifier=>'E'
-,p_column_label=>'Comments'
+,p_column_identifier=>'F'
+,p_column_label=>' '
+,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a> <span style="display:#UNDO_DISPLAY#;"><button type="button" class="t-Button t-Button--small t-Button--simple" onclick="uarResetItem(#REVIEW_ITEM_ID#)">Undo</button></span></span>'
 ,p_column_type=>'STRING'
-,p_heading_alignment=>'LEFT'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
 wwv_flow_imp_page.create_worksheet_column(
- p_id=>wwv_flow_imp.id(9700000000000326)
-,p_db_column_name=>'REVIEW_ITEM_ID'
+ p_id=>wwv_flow_imp.id(9700000000000325)
+,p_db_column_name=>'COMMENTS'
 ,p_display_order=>6
-,p_column_identifier=>'F'
-,p_column_label=>' '
-,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a></span>'
+,p_column_identifier=>'E'
+,p_column_label=>'Denial Reason'
 ,p_column_type=>'STRING'
+,p_heading_alignment=>'LEFT'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
@@ -1084,6 +1085,17 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000000345)
+,p_db_column_name=>'UNDO_DISPLAY'
+,p_display_order=>100
+,p_column_identifier=>'J'
+,p_column_label=>'Undo Display'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000341)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -1091,7 +1103,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar2rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:COMMENTS:REVIEW_ITEM_ID:DENY_URL:LOCKED_DISPLAY:UNLOCKED_DISPLAY'
+,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:REVIEW_ITEM_ID:COMMENTS:DENY_URL:LOCKED_DISPLAY:UNLOCKED_DISPLAY:UNDO_DISPLAY'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000395)
@@ -1116,6 +1128,12 @@ wwv_flow_imp_page.create_page_plug(
 'htp.p(''  uarSaveScrollPos();'');',
 'htp.p(''  apex.item("P2_ACTION_ITEM_ID").setValue(id);'');',
 'htp.p(''  apex.submit("APPROVE_ITEM");'');',
+'htp.p(''}'');',
+'htp.p(''function uarResetItem(id){'');',
+'htp.p(''  if (!confirm("Reset this item back to Pending?")) { return; }'');',
+'htp.p(''  uarSaveScrollPos();'');',
+'htp.p(''  apex.item("P2_ACTION_ITEM_ID").setValue(id);'');',
+'htp.p(''  apex.submit("RESET_ITEM");'');',
 'htp.p(''}'');',
 'htp.p(''window.addEventListener("load", function(){'');',
 'htp.p(''  var pos = sessionStorage.getItem("uar_scroll_pos");'');',
@@ -1145,6 +1163,26 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_internal_uid=>1700000000000397
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000000398)
+,p_process_sequence=>17
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Reset Item'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''RESET_ITEM'' then',
+'   update xxcti_uar_review_items',
+'      set approval = null,',
+'          comments = null',
+'    where review_item_id = :P2_ACTION_ITEM_ID',
+'      and employee_number = :P2_EMPLOYEE_ID',
+'      and cycle_id = :P2_CYCLE_ID;',
+'   commit;',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000000398
 );
 wwv_flow_imp_page.create_page_button(
  p_id=>wwv_flow_imp.id(9700000000000380)

@@ -1334,3 +1334,23 @@ in the same script restores and clears it on the next page load. Known minor edg
 manager leaves mid-review and returns to a *different* employee's page before ever reaching a
 fresh load without a pending saved position — considered minor enough not to engineer around
 unless it turns out to be noticeable in practice.
+
+## P2: Undo back to Pending, column reorder, Comments renamed (2026-10-16)
+
+There was no way to recover from an accidental Approve/Deny click short of denying-then-
+re-approving (which works but is roundabout, and re-approving clears the comment, so an
+accidental Approve followed by "fixing" it that way would silently lose a real denial
+reason if one had existed). Added a third action, **Undo**, visible only once an item has
+a decision (`ri.approval is not null`, via a new `UNDO_DISPLAY` flag alongside the existing
+`LOCKED_DISPLAY`/`UNLOCKED_DISPLAY`) and only while the item is still editable (nested inside
+the same unlocked `<span>`). It submits `RESET_ITEM`, a new `AFTER_SUBMIT` process that sets
+both `approval` and `comments` back to `null` — true Pending, not just a relabeled state —
+and confirms first via a plain JS `confirm()` since this discards whatever reasoning was
+recorded. Styled `t-Button--simple` (precedented in PMO Hub) rather than another semantic
+color, since it's a neutral/undo action, not an approve or deny.
+
+Also reordered the row's columns per user request: the Approve/Deny/Undo column now sits
+between **Approval** and the renamed **Denial Reason** column (previously "Comments"),
+instead of trailing after it. Reusing the existing carrier column (`REVIEW_ITEM_ID`) for the
+reorder, so no new region/column ids were needed for that part — just `p_display_order` and
+the `p_report_columns` list order.
