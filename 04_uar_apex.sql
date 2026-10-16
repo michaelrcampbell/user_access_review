@@ -1036,7 +1036,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>5
 ,p_column_identifier=>'F'
 ,p_column_label=>' '
-,p_column_html_expression=>'<span style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a> <span style="display:#UNDO_DISPLAY#;"><button type="button" class="t-Button t-Button--small t-Button--simple" onclick="uarResetItem(#REVIEW_ITEM_ID#)">Undo</button></span></span>'
+,p_column_html_expression=>'<span class="uar-actions-cell" style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span class="uar-actions-cell" style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a> <span style="display:#UNDO_DISPLAY#;"><button type="button" class="t-Button t-Button--small t-Button--simple" onclick="uarResetItem(#REVIEW_ITEM_ID#)">Undo</button></span></span>'
 ,p_column_type=>'STRING'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
@@ -1120,6 +1120,11 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_display_sequence=>35
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.t-Region:has(.uar-actions-cell) td:nth-child(5),'');',
+'htp.p(''.t-Region:has(.uar-actions-cell) th:nth-child(5){width:1%;white-space:nowrap;}'');',
+'htp.p(''.t-Region:has(.uar-actions-cell) thead th:nth-child(5){pointer-events:none;cursor:default;}'');',
+'htp.p(''</style>'');',
 'htp.p(''<script>'');',
 'htp.p(''function uarSaveScrollPos(){'');',
 'htp.p(''  sessionStorage.setItem("uar_scroll_pos", window.scrollY);'');',
@@ -2321,8 +2326,8 @@ wwv_flow_imp_page.create_page_process(
 'end if;',
 '',
 'begin',
-'   select responsibility, application',
-'     into :P8_RESPONSIBILITY_DISPLAY, :P8_APPLICATION_DISPLAY',
+'   select responsibility, application, comments',
+'     into :P8_RESPONSIBILITY_DISPLAY, :P8_APPLICATION_DISPLAY, :P8_COMMENTS',
 '     from xxcti_uar_review_items',
 '    where review_item_id = :P8_REVIEW_ITEM_ID;',
 'exception when no_data_found then',

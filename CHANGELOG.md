@@ -1354,3 +1354,24 @@ between **Approval** and the renamed **Denial Reason** column (previously "Comme
 instead of trailing after it. Reusing the existing carrier column (`REVIEW_ITEM_ID`) for the
 reorder, so no new region/column ids were needed for that part — just `p_display_order` and
 the `p_report_columns` list order.
+
+## P2/P8: shrink action column, disable its sort, pre-fill the Deny comment (2026-10-16)
+
+The Approve/Deny/Undo column was still rendering wider than its content, and the user also
+asked to remove sort/filter for that one column specifically. No file I have shows
+`create_worksheet_column` taking a filter/sort-disable or width parameter — the closest
+precedent (`p_enable_filter`/`p_enable_sort_group`/`p_escape_on_http_output`) only ever
+appears on `create_region_column`, the Interactive *Grid* column API, a different call than
+the Interactive *Report* columns this page uses. Rather than guess another unconfirmed
+parameter after three import failures already this feature, fixed both with plain CSS,
+scoped the same way as the P8 width fix: a `uar-actions-cell` marker class added to the
+column's own html_expression content, selected via `.t-Region:has(.uar-actions-cell)
+td/th:nth-child(5)`. Sets `width:1%` (shrinks to content) and, on the header only,
+`pointer-events:none` (removes click-to-sort; the per-column filter UI needs the toolbar,
+already hidden). A wrong CSS selector here just fails to match anything — unlike a wrong
+PL/SQL parameter, it can't break the import.
+
+Separately: editing an already-Denied item's reason showed a blank comment box, since
+Page 8's context-loading query only ever selected `responsibility`/`application`. It now
+also selects the existing `comments` into `P8_COMMENTS`, so reopening Deny on an item that
+already has a reason shows it instead of starting blank.
