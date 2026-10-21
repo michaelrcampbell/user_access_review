@@ -1469,6 +1469,11 @@ progress bar has progressbar semantics.
 independence, reassignment, Workday taking over, removal, end-dated reporting). Sandbox seed
 gains employee 1002 (a second top-level person) and no longer generates end dates.
 
+**Fixed after review in a real browser:** a grey bar showed on the label ("Cycle", "Manager") of the
+dropdowns on Pages 3 and 5. Cause: Universal Theme paints a background strip across the full width of
+a dropdown's floating label, and the page CSS had narrowed only the dropdown, so the strip stuck out
+beside it. Pages 3 and 5 now narrow the whole field (`.t-Form-fieldContainer`, with `!important`
+because the theme's own rule is more specific) so label, strip and dropdown line up.
+
 **Still open:** the SSO credential is named for PMO Hub and each environment needs its own secret
-after import (deliberately deferred); the sandbox screenshots show a faint bar beside dropdowns
-that may be a rendering artifact of the offline screenshot method - check in a real browser.
+after import (deliberately deferred).

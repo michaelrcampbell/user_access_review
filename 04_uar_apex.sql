@@ -1350,9 +1350,10 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer{max-width:440px !important;}'');',
 'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
 'htp.p(''.t-Form-fieldContainer select'');',
-'htp.p(''{ max-width:400px; width:400px; }'');',
+'htp.p(''{ max-width:none !important; width:100% !important; }'');',
 'htp.p(''.t-HeroRegion:has(.fa-calendar){margin-bottom:3em;}'');',
 'htp.p(''</style>'');'))
 );
@@ -2626,9 +2627,10 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer{max-width:520px !important;}'');',
 'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
 'htp.p(''.t-Form-fieldContainer select'');',
-'htp.p(''{ max-width:520px; width:520px; }'');',
+'htp.p(''{ max-width:none !important; width:100% !important; }'');',
 'htp.p(''.t-HeroRegion:has(.fa-users){margin-bottom:3em;}'');',
 'htp.p(''</style>'');'))
 );
