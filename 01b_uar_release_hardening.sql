@@ -3,7 +3,8 @@
 -- Run as XXUAR AFTER 01_uar_schema_ddl.sql and BEFORE 02_uar_packages.sql
 -- (the packages reference the views and the log table created here).
 -- Existing installs: run this file, then re-run 02_uar_packages.sql
--- (every statement in 02 is CREATE OR REPLACE).
+-- (every statement in 02 is CREATE OR REPLACE). This file is safe to run again:
+-- objects that already exist are left alone and the views are refreshed.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -38,24 +39,53 @@ end;
 -- 1. Cycle integrity the packages used to rely on alone.
 -- ----------------------------------------------------------------------------
 -- Exactly one OPEN cycle at a time, enforced by the database.
-create unique index xxcti_uar_cycles_one_open_ux
-    on xxcti_uar_review_cycles (case when status = 'OPEN' then 1 end);
+begin
+    execute immediate q'~create unique index xxcti_uar_cycles_one_open_ux
+    on xxcti_uar_review_cycles (case when status = 'OPEN' then 1 end)~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
 -- Cycle names are how admins tell cycles apart in the pickers.
-create unique index xxcti_uar_cycles_name_ux
-    on xxcti_uar_review_cycles (upper(cycle_name));
+begin
+    execute immediate q'~create unique index xxcti_uar_cycles_name_ux
+    on xxcti_uar_review_cycles (upper(cycle_name))~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
-alter table xxcti_uar_review_cycles add constraint xxcti_uar_review_cycles_dates_ck
-    check (period_end >= period_start);
+begin
+    execute immediate q'~alter table xxcti_uar_review_cycles add constraint xxcti_uar_review_cycles_dates_ck
+    check (period_end >= period_start)~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
 -- ----------------------------------------------------------------------------
 -- 2. Admin action log. Written by the packages (never directly by the app).
 --    Deliberately has no foreign keys: a deleted cycle's log entries must
 --    outlive it.
 -- ----------------------------------------------------------------------------
-create sequence xxcti_uar_admin_log_seq start with 1 increment by 1;
+begin
+    execute immediate q'~create sequence xxcti_uar_admin_log_seq start with 1 increment by 1~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
-create table xxcti_uar_admin_log (
+begin
+    execute immediate q'~create table xxcti_uar_admin_log (
     log_id         number         not null,
     action         varchar2(40)   not null,
     cycle_id       number,
@@ -63,7 +93,13 @@ create table xxcti_uar_admin_log (
     performed_by   varchar2(240)  default coalesce(sys_context('APEX$SESSION','APP_USER'), user),
     performed_date date           default sysdate not null,
     constraint xxcti_uar_admin_log_pk primary key (log_id)
-);
+)~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
 comment on table xxcti_uar_admin_log is
   'Who did what to cycles and the admin list: open, close, delete, reopen a submission, submit on behalf of a manager, add/remove admin. No FKs on purpose so entries outlive deleted cycles.';
@@ -75,7 +111,8 @@ comment on table xxcti_uar_admin_log is
 --    a reviewer on Page 5. An assignment never overrides a manager Workday
 --    knows about, and is ignored automatically once Workday supplies one.
 -- ----------------------------------------------------------------------------
-create table xxcti_uar_reviewer_overrides (
+begin
+    execute immediate q'~create table xxcti_uar_reviewer_overrides (
     employee_id   number         not null,
     reviewer_id   number         not null,
     reason        varchar2(400),
@@ -83,7 +120,13 @@ create table xxcti_uar_reviewer_overrides (
     assigned_date date           default sysdate not null,
     constraint xxcti_uar_reviewer_ovr_pk primary key (employee_id),
     constraint xxcti_uar_reviewer_ovr_ck check (employee_id <> reviewer_id)
-);
+)~';
+exception
+    when others then
+        -- already installed (name in use / index or constraint exists): nothing to do
+        if sqlcode not in (-955, -1408, -2264, -2275) then raise; end if;
+end;
+/
 
 comment on table xxcti_uar_reviewer_overrides is
   'Admin-assigned reviewer for an employee Workday gives no usable manager (top of the hierarchy, manager missing, or employee not in the feed). Only used while Workday has no manager for the employee.';
