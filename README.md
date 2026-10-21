@@ -157,3 +157,10 @@ Carried over from PMO Hub's history, all confirmed real:
   SQL Workshop → SQL Scripts. PMO Hub's export (about 796 KB) was too large for SQL
   Scripts on this instance. If this file approaches the high hundreds of KB, switch to
   App Builder → Import instead of waiting for a size error.
+
+## Deployment packs
+`deploy/<env>-<date>/` is a ready-to-run manual deployment pack (pre-flight checks, schema patch, app export,
+post-deploy checks, a test checklist, rollback files, and a manifest). `deploy/make_pack.py <folder> <from-ref>`
+assembles the generated parts from the repo; `from-ref` is whatever is currently live in the target. Start with
+`deploy/dev-2026-10-21/README_DEPLOY.md`. After a pack is deployed and tested, tag the source commit
+(`dev-YYYY-MM-DD`, `test-...`, `prod-...`) like PMO Hub does.

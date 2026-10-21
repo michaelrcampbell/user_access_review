@@ -1,2 +1,5 @@
 *.xlsx
 *.xls
+
+# built deployment zips (the pack folders are what is tracked)
+deploy/*.zip
