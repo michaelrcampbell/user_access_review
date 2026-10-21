@@ -1386,3 +1386,49 @@ assuming one: it locates the first `.uar-actions-cell` marker in the table, walk
 `<td>`, computes that cell's *actual* child index at runtime, then applies the width/no-sort
 styling to the `<th>`/`<td>`s at that same index. This is self-correcting regardless of any
 extra columns APEX renders that aren't in the declared column list.
+
+## Release hardening — 2026-10-21 (branch `feature/release-hardening`)
+
+Result of a pre-release review: code read-through, 56 database-level checks as simulated
+APEX users, and an end-to-end run through the real UI over HTTP against the MRCDEV sandbox.
+Package-level checks live in `07_uar_regression_tests.sql`; the UI flow was exercised by
+script and by rendering the pages, not by an automated suite in the repo.
+
+**Control gaps closed** (each one reproduced first):
+- An admin could approve their own access. `can_review` now refuses the caller's own
+  employee id, admin or not.
+- `submit_review` validated nothing (any manager id, incomplete items, closed cycle). It now
+  requires an open cycle, an existing manager with items, the caller to be that manager or an
+  admin, and no pending items. Admin submit-on-behalf is allowed and logged.
+- `delete_cycle` could erase a closed cycle's evidence. It now only deletes OPEN cycles
+  (opened by mistake); closed cycles are never deletable from the app.
+- No record of admin actions: new `xxcti_uar_admin_log` (open/close/delete/reopen,
+  submit-on-behalf, add/remove admin), written by the packages, shown on Page 4.
+- Rewriting an existing denial reason left approver/date untouched and wrote no history. The
+  update trigger now also fires on comment changes. Page 4 gains "Decision Changes".
+- Items nobody could review (employee missing from Workday, no manager, manager with no row)
+  were invisible everywhere. New `xxcti_uar_unassigned_items` view; Page 3 warns about them
+  and says how many when a cycle opens.
+- A duplicate Workday row inflated a manager's totals. `xxcti_uar_cycle_progress` now
+  de-duplicates; `xxcti_uar_data_issues` reports duplicates, conflicting managers and shared
+  emails on Page 3. `can_review`/`can_edit_item` fail closed on ambiguous data.
+- Database-level guards: one OPEN cycle (unique index), unique cycle names, period end >=
+  period start. Packages also check admin-ness themselves (inside an APEX session) instead of
+  relying on page role gating alone.
+
+**Usability:** success messages on every action; "no cycle open" / "not linked to an employee"
+states on Page 1; an "Admin view" banner when an admin looks at another manager's team;
+Close/Delete confirms state how many items are pending; Delete is red; Close Cycle picker
+follows a newly opened cycle; Add/Remove Admin validates and logs; mail download switched off
+(no mailer); messages raised by the app show without the `ORA-20xxx:` prefix
+(`xxcti_uar_error_handler`); Page 4 shows employee name and fewer default columns, dates no
+longer wrap; contrast fixes (TEST badge, amber due-date text, "Locked").
+
+**Found and fixed along the way:** the `COMMENT ON ... 'a' || 'b'` statements in
+`01_uar_schema_ddl.sql` were invalid and never created the table comments.
+
+**Deliberately not changed (needs a decision):** employees at the top of the Workday
+hierarchy have no manager, so nobody can review their access (now flagged on Page 3);
+whether admins may submit on a manager's behalf; end-dated responsibilities are still
+included in a cycle's snapshot; the app has no session idle/length limits set; the SSO
+credential is named for PMO Hub and each environment needs its own secret after import.

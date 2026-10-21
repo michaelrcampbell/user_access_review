@@ -28,10 +28,29 @@ create or replace package xxcti_uar_security_pkg as
     -- 'Y' if p_app_user may review p_employee_id: either an admin, or
     -- p_employee_id's manager_id resolves back to p_app_user's own
     -- employee_id.
+    -- Never 'Y' for the caller's OWN access, admin or not: nobody approves
+    -- their own responsibilities. Fails closed ('N') if the Workday data is
+    -- ambiguous for that employee.
     function can_review(
         p_employee_id in varchar2,
         p_app_user    in varchar2 default sys_context('APEX$SESSION','APP_USER')
     ) return varchar2;
+
+    -- Raises ORA-20050 unless the caller is an admin. Only enforced inside an
+    -- APEX session: scripts run directly as the schema owner are trusted, the
+    -- same way the update trigger documents for maintenance work.
+    procedure require_admin;
+
+    -- Appends to xxcti_uar_admin_log. Part of the caller's transaction.
+    procedure log_action(
+        p_action   in varchar2,
+        p_cycle_id in number   default null,
+        p_detail   in varchar2 default null
+    );
+
+    -- Admin-list maintenance (Page 7). Validates, enforces admin-only, logs.
+    procedure add_admin(p_email in varchar2);
+    procedure remove_admin(p_email in varchar2);
 
 end xxcti_uar_security_pkg;
 /
@@ -74,7 +93,15 @@ create or replace package body xxcti_uar_security_pkg as
         p_app_user    in varchar2 default sys_context('APEX$SESSION','APP_USER')
     ) return varchar2 is
         l_manager_id varchar2(240);
+        l_self       varchar2(240);
     begin
+        l_self := resolve_employee_id(p_app_user);
+
+        -- Nobody reviews their own access -- admins included.
+        if l_self is not null and l_self = p_employee_id then
+            return 'N';
+        end if;
+
         if is_admin(p_app_user) = 'Y' then
             return 'Y';
         end if;
@@ -85,31 +112,91 @@ create or replace package body xxcti_uar_security_pkg as
          where to_char(employee_id) = p_employee_id;
 
         return case
-                 when l_manager_id = resolve_employee_id(p_app_user) then 'Y'
+                 when l_manager_id = l_self then 'Y'
                  else 'N'
                end;
     exception
-        when no_data_found then
+        when no_data_found or too_many_rows then
             return 'N';
     end can_review;
+
+    procedure require_admin is
+        l_user varchar2(240) := sys_context('APEX$SESSION','APP_USER');
+    begin
+        if l_user is not null and is_admin(l_user) = 'N' then
+            raise_application_error(-20050, 'Administrator access is required for this action.');
+        end if;
+    end require_admin;
+
+    procedure log_action(
+        p_action   in varchar2,
+        p_cycle_id in number   default null,
+        p_detail   in varchar2 default null
+    ) is
+    begin
+        insert into xxcti_uar_admin_log (log_id, action, cycle_id, detail)
+        values (xxcti_uar_admin_log_seq.nextval, p_action, p_cycle_id, substr(p_detail, 1, 4000));
+    end log_action;
+
+    procedure add_admin(p_email in varchar2) is
+        l_email varchar2(240) := lower(trim(p_email));
+        l_count number;
+    begin
+        require_admin;
+
+        if l_email is null
+           or not regexp_like(l_email, '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$') then
+            raise_application_error(-20040, 'Enter a valid email address, for example name@company.com.');
+        end if;
+
+        select count(*) into l_count from xxcti_uar_admins where upper(email_address) = upper(l_email);
+        if l_count > 0 then
+            raise_application_error(-20041, l_email || ' is already an admin.');
+        end if;
+
+        insert into xxcti_uar_admins (email_address) values (l_email);
+        log_action('ADD_ADMIN', null, l_email);
+        commit;
+    end add_admin;
+
+    procedure remove_admin(p_email in varchar2) is
+        l_email varchar2(240) := lower(trim(p_email));
+    begin
+        require_admin;
+
+        if upper(l_email) = upper(sys_context('APEX$SESSION','APP_USER')) then
+            raise_application_error(-20002, 'You cannot remove your own admin access from here.');
+        end if;
+
+        delete from xxcti_uar_admins where upper(email_address) = upper(l_email);
+        if sql%rowcount = 0 then
+            raise_application_error(-20042, l_email || ' is not in the admin list.');
+        end if;
+
+        log_action('REMOVE_ADMIN', null, l_email);
+        commit;
+    end remove_admin;
 
 end xxcti_uar_security_pkg;
 /
 show errors
 
 -- ----------------------------------------------------------------------------
--- Cycle management -- new for the rebuild.
+-- Cycle management.
+-- Every state-changing procedure here validates for itself: the Page 3/Page 1
+-- buttons being hidden or role-gated is a convenience, not the control.
+-- Error codes: -20001 cycle already open, -20010..-20014 open_cycle input,
+-- -20015..-20018 close/delete state, -20030..-20034 sign-off, -20050 not admin.
 -- ----------------------------------------------------------------------------
 create or replace package xxcti_uar_cycle_pkg as
 
     -- Returns the currently OPEN cycle_id, or null if none is open.
     function current_open_cycle return number;
 
-    -- Opens a new cycle and snapshots every row currently in
-    -- xxcti_uar_employee_responsibilities into xxcti_uar_review_items for
-    -- it. Raises an application error if a cycle is already open (close it
-    -- first) -- deliberately only one open cycle at a time, to keep "which
-    -- cycle am I reviewing" unambiguous on Page 1.
+    -- Admin only. Opens a new cycle and snapshots every row currently in
+    -- xxcti_uar_employee_responsibilities into xxcti_uar_review_items for it.
+    -- Raises if a cycle is already open, the inputs are invalid, the name is
+    -- taken, or there is nothing to review. Logged.
     procedure open_cycle(
         p_cycle_name   in varchar2,
         p_period_start in date,
@@ -118,10 +205,10 @@ create or replace package xxcti_uar_cycle_pkg as
         p_cycle_id     out number
     );
 
-    -- Closes a cycle. Items left with a null approval stay null -- closing
-    -- does not force-approve or force-deny anything; it just locks the
-    -- cycle's items against further edits (enforced by can_edit_cycle,
-    -- called from the Page 2 BEFORE_HEADER gate in APEX_BUILD_GUIDE.md).
+    -- Admin only. Closes an OPEN cycle. Items left with a null approval stay
+    -- null -- closing does not force-approve or force-deny anything; it
+    -- locks the cycle's items against further edits. Raises if the cycle does
+    -- not exist or is already closed. Logged, with how much was still pending.
     procedure close_cycle(p_cycle_id in number);
 
     -- 'Y'/'N' -- whether p_cycle_id currently accepts edits.
@@ -133,26 +220,25 @@ create or replace package xxcti_uar_cycle_pkg as
 
     -- 'Y'/'N' -- whether a specific review item may still be edited: the
     -- cycle must be open AND the item's manager must not have submitted.
-    -- This is the one check both the Page 2 load gate and the
-    -- xxcti_uar_review_items_auth trigger call, so both enforce the same
-    -- rule. Resolves the manager from p_employee_number itself rather than
-    -- trusting a caller-supplied manager id.
+    -- Both the Page 2/8 load gates and the xxcti_uar_review_items_auth
+    -- trigger call this. Resolves the manager from p_employee_number itself
+    -- rather than trusting a caller-supplied manager id. Fails closed.
     function can_edit_item(p_employee_number in varchar2, p_cycle_id in number) return varchar2;
 
     -- Records that p_manager_id has submitted their review for p_cycle_id.
-    -- Idempotent -- submitting twice is a no-op, not an error. Page 1 only
-    -- offers this once every item is complete, but the check is not
-    -- re-validated here; the caller (the page) is responsible for only
-    -- offering it when true.
+    -- Validates: cycle open, manager exists and has items, the caller is that
+    -- manager (or an admin, which is logged as a submit-on-behalf), and no
+    -- item is still pending. Idempotent for an already-submitted manager.
     procedure submit_review(p_cycle_id in number, p_manager_id in number);
 
-    -- Undoes a submission, unlocking that manager's items again. Admin UI
-    -- only (Page 3).
+    -- Admin only. Undoes a submission, unlocking that manager's items again.
+    -- Raises if there is no submission to undo. Logged.
     procedure reopen_review(p_cycle_id in number, p_manager_id in number);
 
-    -- Permanently deletes a cycle and every review item in it -- including
-    -- any approval/denial/comment history already recorded. No undo. Admin
-    -- UI only (Page 6), intended for cleaning up test/mistake cycles.
+    -- Admin only. Permanently deletes an OPEN cycle and everything in it --
+    -- meant for cleaning up a cycle opened by mistake. CLOSED cycles are the
+    -- audit record and can never be deleted here. Logged, with what was
+    -- discarded.
     procedure delete_cycle(p_cycle_id in number);
 
 end xxcti_uar_cycle_pkg;
@@ -183,8 +269,25 @@ create or replace package body xxcti_uar_cycle_pkg as
         p_due_date     in date,
         p_cycle_id     out number
     ) is
-        l_existing number;
+        l_existing   number;
+        l_name       varchar2(120) := trim(p_cycle_name);
+        l_count      number;
+        l_items      number;
+        l_unassigned number;
     begin
+        xxcti_uar_security_pkg.require_admin;
+
+        if l_name is null or p_period_start is null or p_period_end is null or p_due_date is null then
+            raise_application_error(-20010,
+                'Cycle name, period start, period end, and due date are all required.');
+        end if;
+        if p_period_end < p_period_start then
+            raise_application_error(-20011, 'Period end cannot be earlier than period start.');
+        end if;
+        if trunc(p_due_date) < trunc(sysdate) then
+            raise_application_error(-20012, 'Due date cannot be in the past.');
+        end if;
+
         l_existing := current_open_cycle;
         if l_existing is not null then
             raise_application_error(
@@ -193,22 +296,32 @@ create or replace package body xxcti_uar_cycle_pkg as
             );
         end if;
 
+        select count(*) into l_count
+          from xxcti_uar_review_cycles where upper(cycle_name) = upper(l_name);
+        if l_count > 0 then
+            raise_application_error(-20013,
+                'A cycle named "' || l_name || '" already exists. Choose a different name.');
+        end if;
+
+        select count(*) into l_count from xxcti_uar_employee_responsibilities;
+        if l_count = 0 then
+            raise_application_error(-20014,
+                'There are no responsibilities to review, so a cycle would be empty.');
+        end if;
+
         select xxcti_uar_cycle_id_seq.nextval into p_cycle_id from dual;
 
         insert into xxcti_uar_review_cycles (
             cycle_id, cycle_name, period_start, period_end, due_date, status
         ) values (
-            p_cycle_id, p_cycle_name, p_period_start, p_period_end, p_due_date, 'OPEN'
+            p_cycle_id, l_name, p_period_start, p_period_end, p_due_date, 'OPEN'
         );
 
-        -- xxcti_uar_employee_responsibilities has no last_logon column (confirmed
-        -- against user_tab_columns 2026-09-28). The real source is the old MVP's
-        -- audit table (xxcti_uar_employee_responsibilities_audit), confirmed
-        -- 2026-10-12 to still carry last_logon by employee/responsibility/
-        -- application -- whether it's still actively refreshed by its external
-        -- process isn't confirmed, so treat this as best-available, not
-        -- guaranteed-current. A scalar MAX() subquery, not a join, so a
-        -- duplicate match in the audit table can't multiply snapshot rows.
+        -- last_logon is not on xxcti_uar_employee_responsibilities; the real
+        -- source is the old MVP's audit table, matched by employee/
+        -- responsibility/application. A scalar MAX() subquery, not a join, so
+        -- a duplicate match there can't multiply snapshot rows. Best-available,
+        -- not guaranteed-current (see README).
         insert into xxcti_uar_review_items (
             review_item_id, cycle_id, employee_number, user_name,
             responsibility, application, start_date, end_date, last_logon
@@ -227,17 +340,52 @@ create or replace package body xxcti_uar_cycle_pkg as
                    and aud.responsibility  = er.responsibility
                    and aud.application     = er.application)
           from xxcti_uar_employee_responsibilities er;
+        l_items := sql%rowcount;
+
+        select count(*) into l_unassigned
+          from xxcti_uar_unassigned_items where cycle_id = p_cycle_id;
+
+        xxcti_uar_security_pkg.log_action('OPEN_CYCLE', p_cycle_id,
+            'Opened "' || l_name || '": ' || l_items || ' items, ' || l_unassigned ||
+            ' with no reachable reviewer.');
 
         commit;
     end open_cycle;
 
     procedure close_cycle(p_cycle_id in number) is
+        l_status  varchar2(10);
+        l_total   number;
+        l_pending number;
     begin
+        xxcti_uar_security_pkg.require_admin;
+
+        begin
+            select status into l_status
+              from xxcti_uar_review_cycles
+             where cycle_id = p_cycle_id
+               for update;
+        exception
+            when no_data_found then
+                raise_application_error(-20015, 'That cycle does not exist.');
+        end;
+
+        if l_status <> 'OPEN' then
+            raise_application_error(-20016, 'That cycle is already closed.');
+        end if;
+
+        select count(*), count(*) - count(approval)
+          into l_total, l_pending
+          from xxcti_uar_review_items
+         where cycle_id = p_cycle_id;
+
         update xxcti_uar_review_cycles
            set status      = 'CLOSED',
                closed_by   = sys_context('APEX$SESSION','APP_USER'),
                closed_date = sysdate
          where cycle_id = p_cycle_id;
+
+        xxcti_uar_security_pkg.log_action('CLOSE_CYCLE', p_cycle_id,
+            'Closed with ' || l_pending || ' of ' || l_total || ' items still pending.');
 
         commit;
     end close_cycle;
@@ -282,14 +430,63 @@ create or replace package body xxcti_uar_cycle_pkg as
 
         return case when manager_signed_off(p_cycle_id, l_manager_id) = 'Y' then 'N' else 'Y' end;
     exception
-        when no_data_found then
+        when no_data_found or too_many_rows then
             return 'N';
     end can_edit_item;
 
     procedure submit_review(p_cycle_id in number, p_manager_id in number) is
+        l_user    varchar2(240) := sys_context('APEX$SESSION','APP_USER');
+        l_count   number;
+        l_pending number;
+        l_total   number;
     begin
+        if can_edit_cycle(p_cycle_id) = 'N' then
+            raise_application_error(-20030, 'This review cycle is closed or does not exist.');
+        end if;
+
+        select count(*) into l_count
+          from xxcti_uar_workday_employee_mgr where manager_id = p_manager_id;
+        if l_count = 0 then
+            raise_application_error(-20031, 'That manager does not exist.');
+        end if;
+
+        if l_user is not null
+           and xxcti_uar_security_pkg.is_admin(l_user) = 'N'
+           and nvl(xxcti_uar_security_pkg.resolve_employee_id(l_user), '-') <> to_char(p_manager_id) then
+            raise_application_error(-20032, 'You can only submit your own review.');
+        end if;
+
+        -- already submitted: nothing to do
+        if manager_signed_off(p_cycle_id, p_manager_id) = 'Y' then
+            return;
+        end if;
+
+        select count(*), count(*) - count(ri.approval)
+          into l_total, l_pending
+          from xxcti_uar_review_items ri
+         where ri.cycle_id = p_cycle_id
+           and ri.employee_number in (
+                 select to_char(employee_id)
+                   from xxcti_uar_workday_employee_mgr
+                  where manager_id = p_manager_id);
+
+        if l_total = 0 then
+            raise_application_error(-20034, 'There are no items assigned for this cycle, so there is nothing to submit.');
+        end if;
+        if l_pending > 0 then
+            raise_application_error(-20033,
+                l_pending || ' item(s) are still pending. Approve or deny every item before submitting.');
+        end if;
+
         insert into xxcti_uar_manager_signoffs (cycle_id, manager_id)
         values (p_cycle_id, p_manager_id);
+
+        if l_user is not null
+           and nvl(xxcti_uar_security_pkg.resolve_employee_id(l_user), '-') <> to_char(p_manager_id) then
+            xxcti_uar_security_pkg.log_action('SUBMIT_ON_BEHALF', p_cycle_id,
+                'Admin ' || l_user || ' submitted the review for manager ' || p_manager_id || '.');
+        end if;
+
         commit;
     exception
         when dup_val_on_index then
@@ -298,14 +495,48 @@ create or replace package body xxcti_uar_cycle_pkg as
 
     procedure reopen_review(p_cycle_id in number, p_manager_id in number) is
     begin
+        xxcti_uar_security_pkg.require_admin;
+
         delete from xxcti_uar_manager_signoffs
          where cycle_id = p_cycle_id
            and manager_id = p_manager_id;
+        if sql%rowcount = 0 then
+            raise_application_error(-20017, 'That manager has no submission to reopen.');
+        end if;
+
+        xxcti_uar_security_pkg.log_action('REOPEN_REVIEW', p_cycle_id,
+            'Reopened the submission of manager ' || p_manager_id || '.');
         commit;
     end reopen_review;
 
     procedure delete_cycle(p_cycle_id in number) is
+        l_status   varchar2(10);
+        l_name     varchar2(120);
+        l_items    number;
+        l_decided  number;
     begin
+        xxcti_uar_security_pkg.require_admin;
+
+        begin
+            select status, cycle_name into l_status, l_name
+              from xxcti_uar_review_cycles
+             where cycle_id = p_cycle_id
+               for update;
+        exception
+            when no_data_found then
+                raise_application_error(-20015, 'That cycle does not exist.');
+        end;
+
+        if l_status <> 'OPEN' then
+            raise_application_error(-20018,
+                'Closed cycles are part of the audit record and cannot be deleted.');
+        end if;
+
+        select count(*), count(approval)
+          into l_items, l_decided
+          from xxcti_uar_review_items
+         where cycle_id = p_cycle_id;
+
         delete from xxcti_uar_manager_signoffs where cycle_id = p_cycle_id;
         delete from xxcti_uar_review_items_history
          where review_item_id in (
@@ -313,6 +544,10 @@ create or replace package body xxcti_uar_cycle_pkg as
          );
         delete from xxcti_uar_review_items where cycle_id = p_cycle_id;
         delete from xxcti_uar_review_cycles where cycle_id = p_cycle_id;
+
+        xxcti_uar_security_pkg.log_action('DELETE_CYCLE', p_cycle_id,
+            'Deleted open cycle "' || l_name || '": discarded ' || l_items ||
+            ' items, ' || l_decided || ' with a recorded decision.');
         commit;
     end delete_cycle;
 
@@ -333,7 +568,8 @@ show errors
 create or replace trigger xxcti_uar_review_items_biu
     before update on xxcti_uar_review_items
     for each row
-    when (nvl(new.approval, 'x') != nvl(old.approval, 'x'))
+    when (nvl(new.approval, 'x') != nvl(old.approval, 'x')
+       or nvl(new.comments, '~') != nvl(old.comments, '~'))
 begin
     insert into xxcti_uar_review_items_history (
         history_id, review_item_id, cycle_id, employee_number,
@@ -380,6 +616,32 @@ begin
             'A comment is required when denying an item -- please explain why before saving.');
     end if;
 end;
+/
+show errors
+
+-- ----------------------------------------------------------------------------
+-- Application error handler (Shared Components > Application Definition >
+-- Error Handling Function). The packages raise their rule violations with
+-- raise_application_error (-20000..-20999) and write the text for people, so
+-- show that text without the "ORA-20xxx:" prefix. Everything else (genuine
+-- bugs, constraint violations, APEX's own errors) is left exactly as APEX
+-- would show it.
+-- ----------------------------------------------------------------------------
+create or replace function xxcti_uar_error_handler(
+    p_error in apex_error.t_error
+) return apex_error.t_error_result is
+    l_result apex_error.t_error_result;
+begin
+    l_result := apex_error.init_error_result(p_error => p_error);
+
+    if not p_error.is_internal_error
+       and p_error.ora_sqlcode between -20999 and -20000 then
+        l_result.message         := apex_error.get_first_ora_error_text(p_error => p_error);
+        l_result.additional_info := null;
+    end if;
+
+    return l_result;
+end xxcti_uar_error_handler;
 /
 show errors
 

@@ -89,10 +89,21 @@ workaround until SMTP exists. The cycle model doesn't need to change to add that
 
 ```sql
 @@01_uar_schema_ddl.sql
+@@01b_uar_release_hardening.sql     -- before 02: the packages use its views and log table
 @@02_uar_packages.sql
 -- @@03_uar_migration_legacy_audit.sql   -- optional
 ```
 or just run `@INSTALL.sql`.
+
+**Already installed (DEV/TEST)?** Run `01b_uar_release_hardening.sql`, then re-run
+`02_uar_packages.sql` (every statement in it is `CREATE OR REPLACE`), then import the new
+`04_uar_apex.sql`. `01b` stops with a plain message if existing data would violate its new
+constraints (two open cycles, duplicate cycle names, a cycle ending before it starts).
+
+Sandbox only (never DEV/TEST/PROD, which have the real Workday/EBS feeds):
+`00_uar_sandbox_source_stubs.sql` + `05_uar_sandbox_seed.sql` build fake source data, and
+`07_uar_regression_tests.sql` is a 56-check regression suite. It refuses to run while any
+cycle is open, so it can never touch real review data.
 
 Then seed at least one admin (`insert into xxcti_uar_admins ...`, see the schema script),
 and run the smoke tests commented at the bottom of `02_uar_packages.sql` before touching

@@ -42,8 +42,7 @@ create table xxcti_uar_review_cycles (
 );
 
 comment on table xxcti_uar_review_cycles is
-  'One row per access-review period. Only one row should normally be OPEN '
-  || 'at a time -- see xxcti_uar_cycle_pkg.current_open_cycle.';
+  'One row per access-review period. Only one row should normally be OPEN at a time -- see xxcti_uar_cycle_pkg.current_open_cycle.';
 
 -- ----------------------------------------------------------------------------
 -- 2. Review items -- replaces xxcti_uar_employee_responsibilities_audit.
@@ -80,9 +79,7 @@ create index xxcti_uar_review_items_cyc_ix on xxcti_uar_review_items (cycle_id);
 create index xxcti_uar_review_items_emp_ix on xxcti_uar_review_items (employee_number);
 
 comment on table xxcti_uar_review_items is
-  'Cycle-scoped snapshot of one employee responsibility, one row per '
-  || 'cycle_id/employee_number/responsibility/application combination at the '
-  || 'time the cycle opened. This is the table Page 2 edits.';
+  'Cycle-scoped snapshot of one employee responsibility, one row per cycle_id/employee_number/responsibility/application combination at the time the cycle opened. This is the table Page 2 edits.';
 
 -- ----------------------------------------------------------------------------
 -- 2b. Review item history -- captures the prior approval state whenever a
@@ -114,9 +111,7 @@ create table xxcti_uar_review_items_history (
 create index xxcti_uar_review_items_hist_ix on xxcti_uar_review_items_history (review_item_id);
 
 comment on table xxcti_uar_review_items_history is
-  'One row per prior approval state, written just before xxcti_uar_review_items.approval '
-  || 'changes -- preserves the earlier approver/date/comments that would otherwise be '
-  || 'silently overwritten if a manager revises their own decision before the cycle closes.';
+  'One row per prior approval state, written just before xxcti_uar_review_items.approval changes -- preserves the earlier approver/date/comments that would otherwise be silently overwritten if a manager revises their own decision before the cycle closes.';
 
 -- ----------------------------------------------------------------------------
 -- 2c. Manager sign-off. A manager submits their review once every item is
@@ -137,9 +132,7 @@ create table xxcti_uar_manager_signoffs (
 );
 
 comment on table xxcti_uar_manager_signoffs is
-  'One row per manager who has submitted their review for a cycle. Presence of a row '
-  || 'locks that manager''s items against further edits until an admin deletes it '
-  || '(xxcti_uar_cycle_pkg.reopen_review) or the cycle closes.';
+  'One row per manager who has submitted their review for a cycle. Presence of a row locks that manager''s items against further edits until an admin deletes it (xxcti_uar_cycle_pkg.reopen_review) or the cycle closes.';
 
 -- ----------------------------------------------------------------------------
 -- 3. Admin allow-list (carried over from the phase-1 security patch)
@@ -152,8 +145,7 @@ create table xxcti_uar_admins (
 );
 
 comment on table xxcti_uar_admins is
-  'Email addresses (matched against APEX APP_USER) authorized to bypass '
-  || 'manager-scoping and view admin-only pages/reports.';
+  'Email addresses (matched against APEX APP_USER) authorized to bypass manager-scoping and view admin-only pages/reports.';
 
 -- Seed yourself so you can test end to end. Change the email first.
 -- insert into xxcti_uar_admins (email_address) values ('your.email@company.com');

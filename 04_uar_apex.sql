@@ -95,6 +95,7 @@ wwv_imp_workspace.create_flow(
 ,p_flow_version=>'Release 2.0'
 ,p_flow_status=>'AVAILABLE_W_EDIT_LINK'
 ,p_flow_unavailable_text=>'This application is currently unavailable at this time.'
+,p_error_handling_function=>'xxcti_uar_error_handler'
 ,p_exact_substitutions_only=>'Y'
 ,p_browser_cache=>'N'
 ,p_browser_frame=>'D'
@@ -370,10 +371,11 @@ wwv_flow_imp_page.create_page_plug(
 'declare',
 '   l_env   varchar2(10);',
 '   l_color varchar2(10);',
+'   l_text  varchar2(10) := ''#FFFFFF'';',
 '   l_name  varchar2(100) := sys_context(''userenv'',''con_name'');',
 'begin',
 '   if l_name like ''%TEST%'' then',
-'      l_env := ''TEST''; l_color := ''#E6A817'';',
+'      l_env := ''TEST''; l_color := ''#E6A817''; l_text := ''#1B1B1B'';',
 '   elsif l_name like ''%DEV%'' then',
 '      l_env := ''DEV'';  l_color := ''#2E75B6'';',
 '   end if;',
@@ -392,7 +394,7 @@ wwv_flow_imp_page.create_page_plug(
 '      htp.p(''badge.style.fontFamily = cs.fontFamily;'');',
 '      htp.p(''badge.style.fontWeight = "bold";'');',
 '      htp.p(''badge.style.fontSize = "11px";'');',
-'      htp.p(''badge.style.color = "#fff";'');',
+'      htp.p(''badge.style.color = "'' || l_text || ''";'');',
 '      htp.p(''badge.style.backgroundColor = "'' || l_color || ''";'');',
 '      htp.p(''badge.style.verticalAlign = "middle";'');',
 '      htp.p(''badge.style.display = "inline-block";'');',
@@ -464,13 +466,51 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_display_sequence=>6
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''<strong>How to use this page:</strong> Below is the list of employees currently '');',
-'htp.p(''assigned to you for this cycle. Click an employee''''s ID to open their access items '');',
-'htp.p(''for review. Once every item below shows as complete, use the '');',
-'htp.p(''<strong>Submit My Review</strong> button above to finalize your submission before '');',
-'htp.p(''the due date for this review cycle.'');',
-'htp.p(''</div>'');'))
+'declare',
+'   l_self varchar2(240) := xxcti_uar_security_pkg.resolve_employee_id;',
+'   l_name varchar2(400);',
+'begin',
+'   if :P1_CYCLE_ID is null then',
+'      htp.p(''<div class="uar-notice" role="status" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>No review cycle is open right now.</strong> Check back when an administrator opens the next cycle.'');',
+'      if xxcti_uar_security_pkg.is_admin = ''Y'' then',
+'         htp.p('' <a href="'' || apex_escape.html_attribute(apex_page.get_url(p_page => 3)) || ''">Open a cycle</a>.'');',
+'      end if;',
+'      htp.p(''</div>'');',
+'   elsif :P1_MANAGER is null then',
+'      htp.p(''<div class="uar-notice" role="status" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>Your sign-in is not linked to an employee record,</strong> so there is nothing for you to review. '');',
+'      htp.p(''If you are a manager, ask an administrator to check that your sign-in email matches the one in the employee data.'');',
+'      if xxcti_uar_security_pkg.is_admin = ''Y'' then',
+'         htp.p('' As an admin you can open any manager''''s team from <a href="'' || apex_escape.html_attribute(apex_page.get_url(p_page => 3)) || ''">Review Cycles</a>.'');',
+'      end if;',
+'      htp.p(''</div>'');',
+'   else',
+'      if l_self is null or l_self <> :P1_MANAGER then',
+'         begin',
+'            select employee_legal_first_name || '' '' || employee_legal_last_name',
+'              into l_name',
+'              from xxcti_uar_workday_employee_mgr',
+'             where to_char(employee_id) = :P1_MANAGER',
+'               and rownum = 1;',
+'         exception when no_data_found then',
+'            l_name := :P1_MANAGER;',
+'         end;',
+'         htp.p(''<div class="uar-admin-banner" role="status" style="background:#FFF8E6;border-left:3px solid #B26B00;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'         htp.p(''<strong>Admin view:</strong> you are looking at '' || apex_escape.html(l_name) || ''''''s team, not your own. '');',
+'         htp.p(''Anything you approve, deny, or submit here is recorded under your name. '');',
+'         htp.p(''<a href="'' || apex_escape.html_attribute(apex_page.get_url(p_page => 1, p_clear_cache => ''1'')) || ''">Back to my team</a>'');',
+'         htp.p(''</div>'');',
+'      end if;',
+'      htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>How to use this page:</strong> Below is the list of employees currently '');',
+'      htp.p(''assigned to you for this cycle. Click an employee''''s ID to open their access items '');',
+'      htp.p(''for review. Once every item below shows as complete, use the '');',
+'      htp.p(''<strong>Submit My Review</strong> button above to finalize your submission before '');',
+'      htp.p(''the due date for this review cycle.'');',
+'      htp.p(''</div>'');',
+'   end if;',
+'end;'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000232)
@@ -509,7 +549,7 @@ wwv_flow_imp_page.create_page_plug(
 '            l_color := ''#C00000'';',
 '            l_label := l_days_left || '' day(s) remaining'';',
 '         elsif l_pct <= 50 then',
-'            l_color := ''#E6A817'';',
+'            l_color := ''#8A5A00'';',
 '            l_label := l_days_left || '' day(s) remaining'';',
 '         else',
 '            l_color := ''#1A7C4F'';',
@@ -700,6 +740,7 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''SUBMIT_REVIEW'' then',
 '   xxcti_uar_cycle_pkg.submit_review(:P1_CYCLE_ID, :P1_MANAGER);',
+'   apex_application.g_print_success_message := ''Review submitted. Thank you -- your items are now locked.'';',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
@@ -752,7 +793,7 @@ wwv_flow_imp_page.create_worksheet(
 ,p_lazy_loading=>false
 ,p_show_detail_link=>'N'
 ,p_download_formats=>'CSV:HTML:XLSX'
-,p_enable_mail_download=>'Y'
+,p_enable_mail_download=>'N'
 ,p_owner=>'ADMIN'
 ,p_internal_uid=>9700000000000290
 );
@@ -1036,7 +1077,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>5
 ,p_column_identifier=>'F'
 ,p_column_label=>' '
-,p_column_html_expression=>'<span class="uar-actions-cell" style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#888;">Locked</span><span class="uar-actions-cell" style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a> <span style="display:#UNDO_DISPLAY#;"><button type="button" class="t-Button t-Button--small t-Button--simple" onclick="uarResetItem(#REVIEW_ITEM_ID#)">Undo</button></span></span>'
+,p_column_html_expression=>'<span class="uar-actions-cell" style="display:#LOCKED_DISPLAY#;white-space:nowrap;color:#595959;">Locked</span><span class="uar-actions-cell" style="display:#UNLOCKED_DISPLAY#;white-space:nowrap;"><button type="button" class="t-Button t-Button--small t-Button--success" onclick="uarApproveItem(#REVIEW_ITEM_ID#)">Approve</button> <a class="t-Button t-Button--small t-Button--danger" onclick="uarSaveScrollPos()" href="#DENY_URL#">Deny</a> <span style="display:#UNDO_DISPLAY#;"><button type="button" class="t-Button t-Button--small t-Button--simple" onclick="uarResetItem(#REVIEW_ITEM_ID#)">Undo</button></span></span>'
 ,p_column_type=>'STRING'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
@@ -1258,6 +1299,75 @@ wwv_flow_imp_page.create_page_plug(
 'htp.p(''</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001001)
+,p_plug_name=>'P3_CYCLE_INFO_JS'
+,p_plug_display_sequence=>6
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_first boolean := true;',
+'begin',
+'   htp.p(''<script>window.uarCycleInfo={'');',
+'   for r in (select c.cycle_id, c.status,',
+'                    (select count(*) from xxcti_uar_review_items ri',
+'                      where ri.cycle_id = c.cycle_id) as total,',
+'                    (select count(*) from xxcti_uar_review_items ri',
+'                      where ri.cycle_id = c.cycle_id and ri.approval is null) as pending,',
+'                    (select count(*) from xxcti_uar_cycle_progress p',
+'                      where p.cycle_id = c.cycle_id',
+'                        and not exists (select 1 from xxcti_uar_manager_signoffs so',
+'                                         where so.cycle_id = p.cycle_id',
+'                                           and so.manager_id = p.manager_id)) as mgrs',
+'               from xxcti_uar_review_cycles c) loop',
+'      htp.p(case when l_first then '''' else '','' end ||',
+'            ''"'' || r.cycle_id || ''":{"status":"'' || r.status || ''","total":'' || r.total ||',
+'            '',"pending":'' || r.pending || '',"mgrs":'' || r.mgrs || ''}'');',
+'      l_first := false;',
+'   end loop;',
+'   htp.p(''};</script>'');',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001002)
+,p_plug_name=>'P3_DATA_WARNINGS'
+,p_plug_display_sequence=>8
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_cycle number := xxcti_uar_cycle_pkg.current_open_cycle;',
+'   l_n     number := 0;',
+'   l_iss   number := 0;',
+'begin',
+'   if l_cycle is not null then',
+'      select count(*) into l_n from xxcti_uar_unassigned_items where cycle_id = l_cycle;',
+'   end if;',
+'   select count(*) into l_iss from xxcti_uar_data_issues;',
+'',
+'   if l_n > 0 or l_iss > 0 then',
+'      htp.p(''<div class="uar-warning" role="alert" style="background:#FFF8E6;border-left:3px solid #B26B00;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>Needs attention before this review can be complete</strong><ul style="margin:6px 0 0 18px;">'');',
+'      if l_n > 0 then',
+'         htp.p(''<li>'' || l_n || '' item(s) in the open cycle have no reachable reviewer, so nobody can approve them from My Team Review:<ul>'');',
+'         for r in (select reason, count(*) as c, min(employee_number) as ex',
+'                     from xxcti_uar_unassigned_items',
+'                    where cycle_id = l_cycle',
+'                    group by reason',
+'                    order by c desc) loop',
+'            htp.p(''<li>'' || r.c || '' &ndash; '' || apex_escape.html(r.reason) || '' (for example employee '' || apex_escape.html(r.ex) || '')</li>'');',
+'         end loop;',
+'         htp.p(''</ul></li>'');',
+'      end if;',
+'      for r in (select issue, count(*) as c, min(ref) as ex',
+'                  from xxcti_uar_data_issues',
+'                 group by issue',
+'                 order by issue) loop',
+'         htp.p(''<li>'' || apex_escape.html(r.issue) || '': '' || r.c || '' case(s) (for example '' || apex_escape.html(r.ex) || '')</li>'');',
+'      end loop;',
+'      htp.p(''</ul></div>'');',
+'   end if;',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000400)
 ,p_plug_name=>'P3_OPEN_NEW_CYCLE'
 ,p_title=>'Open New Cycle'
@@ -1334,20 +1444,12 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Open New Cycle'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'declare',
-'   l_cycle_id number;',
+'   l_cycle_id   number;',
+'   l_items      number;',
+'   l_employees  number;',
+'   l_unassigned number;',
 'begin',
 '   if :REQUEST = ''OPEN_CYCLE'' then',
-'      if :P3_NEW_CYCLE_NAME is null',
-'         or :P3_NEW_PERIOD_START is null',
-'         or :P3_NEW_PERIOD_END is null',
-'         or :P3_NEW_DUE_DATE is null then',
-'         raise_application_error(-20010,',
-'            ''Cycle name, period start, period end, and due date are all required.'');',
-'      end if;',
-'      if to_date(:P3_NEW_PERIOD_END) < to_date(:P3_NEW_PERIOD_START) then',
-'         raise_application_error(-20011,',
-'            ''Period end cannot be earlier than period start.'');',
-'      end if;',
 '      xxcti_uar_cycle_pkg.open_cycle(',
 '         p_cycle_name   => :P3_NEW_CYCLE_NAME,',
 '         p_period_start => to_date(:P3_NEW_PERIOD_START),',
@@ -1355,6 +1457,23 @@ wwv_flow_imp_page.create_page_process(
 '         p_due_date     => to_date(:P3_NEW_DUE_DATE),',
 '         p_cycle_id     => l_cycle_id',
 '      );',
+'      select count(*), count(distinct employee_number)',
+'        into l_items, l_employees',
+'        from xxcti_uar_review_items',
+'       where cycle_id = l_cycle_id;',
+'      select count(*) into l_unassigned',
+'        from xxcti_uar_unassigned_items',
+'       where cycle_id = l_cycle_id;',
+'      apex_application.g_print_success_message :=',
+'         ''Cycle opened: '' || l_items || '' items across '' || l_employees || '' employees.'' ||',
+'         case when l_unassigned > 0',
+'              then '' Warning: '' || l_unassigned || '' item(s) have no reachable reviewer -- see the panel below.''',
+'         end;',
+'      :P3_NEW_CYCLE_NAME   := null;',
+'      :P3_NEW_PERIOD_START := null;',
+'      :P3_NEW_PERIOD_END   := null;',
+'      :P3_NEW_DUE_DATE     := null;',
+'      :P3_ACTION_CYCLE_ID  := l_cycle_id;',
 '   end if;',
 'end;'))
 ,p_process_clob_language=>'PLSQL'
@@ -1419,7 +1538,7 @@ wwv_flow_imp_page.create_page_button(
 ,p_button_plug_id=>wwv_flow_imp.id(9700000000000450)
 ,p_button_name=>'DELETE_CYCLE'
 ,p_button_action=>'DEFINED_BY_DA'
-,p_button_template_options=>'#DEFAULT#'
+,p_button_template_options=>'#DEFAULT#:t-Button--danger'
 ,p_button_template_id=>4072362960822175091
 ,p_button_image_alt=>'Delete Cycle (permanent -- no undo)'
 ,p_button_position=>'DELETE'
@@ -1440,7 +1559,7 @@ wwv_flow_imp_page.create_page_da_action(
 ,p_action_sequence=>10
 ,p_execute_on_page_init=>'N'
 ,p_action=>'NATIVE_JAVASCRIPT_CODE'
-,p_attribute_01=>'if(confirm("Close this cycle? Managers will no longer be able to edit their reviews for it.")){apex.submit("CLOSE_CYCLE");}'
+,p_attribute_01=>'var i=(window.uarCycleInfo||{})[$v("P3_ACTION_CYCLE_ID")];var m="Close this cycle? Managers will no longer be able to edit their reviews for it.";if(i&&i.pending>0){m+="\n\n"+i.pending+" of "+i.total+" items are still pending and "+i.mgrs+" manager(s) have not submitted. Those items will stay unreviewed.";}if(confirm(m)){apex.submit("CLOSE_CYCLE");}'
 );
 wwv_flow_imp_page.create_page_da_event(
  p_id=>wwv_flow_imp.id(9700000000000480)
@@ -1458,7 +1577,7 @@ wwv_flow_imp_page.create_page_da_action(
 ,p_action_sequence=>10
 ,p_execute_on_page_init=>'N'
 ,p_action=>'NATIVE_JAVASCRIPT_CODE'
-,p_attribute_01=>'if(confirm("Delete this cycle and ALL of its review items? This is permanent and cannot be undone.")){apex.submit("DELETE_CYCLE");}'
+,p_attribute_01=>'var i=(window.uarCycleInfo||{})[$v("P3_ACTION_CYCLE_ID")];if(i&&i.status==="CLOSED"){alert("Closed cycles are part of the audit record and cannot be deleted.");}else if(confirm("Delete this cycle and ALL of its review items? This is permanent and cannot be undone.")){apex.submit("DELETE_CYCLE");}'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(9700000000000455)
@@ -1468,7 +1587,12 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Close Cycle'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''CLOSE_CYCLE'' then',
+'   if :P3_ACTION_CYCLE_ID is null then',
+'      raise_application_error(-20019, ''Select a cycle first.'');',
+'   end if;',
 '   xxcti_uar_cycle_pkg.close_cycle(:P3_ACTION_CYCLE_ID);',
+'   apex_application.g_print_success_message := ''Cycle closed. Reviews for it are now locked.'';',
+'   :P3_ACTION_CYCLE_ID := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
@@ -1482,7 +1606,12 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Delete Cycle'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''DELETE_CYCLE'' then',
+'   if :P3_ACTION_CYCLE_ID is null then',
+'      raise_application_error(-20019, ''Select a cycle first.'');',
+'   end if;',
 '   xxcti_uar_cycle_pkg.delete_cycle(:P3_ACTION_CYCLE_ID);',
+'   apex_application.g_print_success_message := ''Cycle deleted.'';',
+'   :P3_ACTION_CYCLE_ID := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
@@ -1678,10 +1807,14 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Reopen Submission'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''REOPEN_SUBMISSION'' then',
+'   if :P3_REOPEN_MANAGER_ID is null then',
+'      raise_application_error(-20019, ''Select a manager first.'');',
+'   end if;',
 '   xxcti_uar_cycle_pkg.reopen_review(',
 '      xxcti_uar_cycle_pkg.current_open_cycle,',
 '      :P3_REOPEN_MANAGER_ID',
 '   );',
+'   apex_application.g_print_success_message := ''Submission reopened. The manager can edit their items again.'';',
 '   :P3_REOPEN_MANAGER_ID := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
@@ -1727,7 +1860,7 @@ wwv_flow_imp_page.create_worksheet(
 ,p_lazy_loading=>false
 ,p_show_detail_link=>'N'
 ,p_download_formats=>'CSV:HTML:XLSX'
-,p_enable_mail_download=>'Y'
+,p_enable_mail_download=>'N'
 ,p_owner=>'ADMIN'
 ,p_internal_uid=>9700000000000540
 );
@@ -1860,7 +1993,8 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_display_sequence=>2
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'htp.p(''<style>.t-HeroRegion:has(.fa-database-lock){margin-bottom:3em;}</style>'');'))
+'htp.p(''<style>.t-HeroRegion:has(.fa-database-lock){margin-bottom:3em;}'');',
+'htp.p(''.a-IRR-table td.u-tC{white-space:nowrap;}</style>'');'))
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000460)
@@ -1874,6 +2008,7 @@ wwv_flow_imp_page.create_page_plug(
 '       ri.review_item_id,',
 '       ri.user_name,',
 '       ri.employee_number,',
+'       uwem.employee_legal_first_name || '' '' || uwem.employee_legal_last_name as employee_name,',
 '       ri.responsibility,',
 '       ri.application,',
 '       ri.start_date,',
@@ -1885,6 +2020,7 @@ wwv_flow_imp_page.create_page_plug(
 '       ri.comments,',
 '       uwem.manager_first_name,',
 '       uwem.manager_last_name,',
+'       uwem.manager_first_name || '' '' || uwem.manager_last_name as manager_name,',
 '       uwem.manager_id,',
 '       b.email_address as manager_email',
 'from xxcti_uar_review_items ri',
@@ -1894,7 +2030,7 @@ wwv_flow_imp_page.create_page_plug(
 '  on ri.employee_number = to_char(uwem.employee_id)',
 'left join xxcti_uar_workday_employee_mgr b',
 '  on uwem.manager_id = b.employee_id',
-'order by cy.period_start desc, ri.approval_date desc'))
+'order by cy.period_start desc, ri.approval_date desc nulls last'))
 ,p_plug_source_type=>'NATIVE_IR'
 );
 wwv_flow_imp_page.create_worksheet(
@@ -1906,7 +2042,7 @@ wwv_flow_imp_page.create_worksheet(
 ,p_lazy_loading=>false
 ,p_show_detail_link=>'N'
 ,p_download_formats=>'CSV:HTML:XLSX'
-,p_enable_mail_download=>'Y'
+,p_enable_mail_download=>'N'
 ,p_owner=>'ADMIN'
 ,p_internal_uid=>9700000000000493
 );
@@ -2112,6 +2248,28 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001120)
+,p_db_column_name=>'EMPLOYEE_NAME'
+,p_display_order=>19
+,p_column_identifier=>'S'
+,p_column_label=>'Employee'
+,p_column_type=>'STRING'
+,p_heading_alignment=>'LEFT'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001121)
+,p_db_column_name=>'MANAGER_NAME'
+,p_display_order=>20
+,p_column_identifier=>'T'
+,p_column_label=>'Manager'
+,p_column_type=>'STRING'
+,p_heading_alignment=>'LEFT'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000518)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -2119,7 +2277,214 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar4rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'CYCLE_NAME:CYCLE_STATUS:REVIEW_ITEM_ID:USER_NAME:EMPLOYEE_NUMBER:RESPONSIBILITY:APPLICATION:START_DATE:END_DATE:APPROVAL:APPROVER:APPROVAL_DATE:LAST_LOGON:COMMENTS:MANAGER_FIRST_NAME:MANAGER_LAST_NAME:MANAGER_ID:MANAGER_EMAIL'
+,p_report_columns=>'CYCLE_NAME:EMPLOYEE_NAME:USER_NAME:RESPONSIBILITY:APPLICATION:APPROVAL:APPROVER:APPROVAL_DATE:COMMENTS:MANAGER_NAME'
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000001100)
+,p_name=>'P4_DECISION_CHANGES'
+,p_title=>'Decision Changes'
+,p_template=>4072358936313175081
+,p_display_sequence=>20
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select cy.cycle_name,',
+'       e.employee_legal_first_name || '' '' || e.employee_legal_last_name as employee_name,',
+'       ri.responsibility,',
+'       ri.application,',
+'       nvl(h.old_approval, ''Pending'') as previous_decision,',
+'       h.old_approver as previous_approver,',
+'       to_char(h.old_approval_date, ''DD-Mon-YYYY HH24:MI'') as previous_date,',
+'       h.old_comments as previous_comments,',
+'       h.changed_by,',
+'       to_char(h.changed_date, ''DD-Mon-YYYY HH24:MI'') as changed_date',
+'from xxcti_uar_review_items_history h',
+'join xxcti_uar_review_items ri on ri.review_item_id = h.review_item_id',
+'join xxcti_uar_review_cycles cy on cy.cycle_id = ri.cycle_id',
+'left join (select distinct employee_id, employee_legal_first_name, employee_legal_last_name',
+'            from xxcti_uar_workday_employee_mgr) e',
+'  on to_char(e.employee_id) = ri.employee_number',
+'where h.old_approval is not null',
+'order by h.changed_date desc, h.history_id desc'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>25
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No decision has been changed after it was first recorded.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001101)
+,p_query_column_id=>1
+,p_column_alias=>'CYCLE_NAME'
+,p_column_display_sequence=>1
+,p_column_heading=>'Cycle'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001102)
+,p_query_column_id=>2
+,p_column_alias=>'EMPLOYEE_NAME'
+,p_column_display_sequence=>2
+,p_column_heading=>'Employee'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001103)
+,p_query_column_id=>3
+,p_column_alias=>'RESPONSIBILITY'
+,p_column_display_sequence=>3
+,p_column_heading=>'Responsibility'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001104)
+,p_query_column_id=>4
+,p_column_alias=>'APPLICATION'
+,p_column_display_sequence=>4
+,p_column_heading=>'Application'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001105)
+,p_query_column_id=>5
+,p_column_alias=>'PREVIOUS_DECISION'
+,p_column_display_sequence=>5
+,p_column_heading=>'Previous Decision'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001106)
+,p_query_column_id=>6
+,p_column_alias=>'PREVIOUS_APPROVER'
+,p_column_display_sequence=>6
+,p_column_heading=>'Previous Approver'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001107)
+,p_query_column_id=>7
+,p_column_alias=>'PREVIOUS_DATE'
+,p_column_display_sequence=>7
+,p_column_heading=>'Previous Date'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001108)
+,p_query_column_id=>8
+,p_column_alias=>'PREVIOUS_COMMENTS'
+,p_column_display_sequence=>8
+,p_column_heading=>'Previous Comments'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001109)
+,p_query_column_id=>9
+,p_column_alias=>'CHANGED_BY'
+,p_column_display_sequence=>9
+,p_column_heading=>'Changed By'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001110)
+,p_query_column_id=>10
+,p_column_alias=>'CHANGED_DATE'
+,p_column_display_sequence=>10
+,p_column_heading=>'Changed On'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000001200)
+,p_name=>'P4_ADMIN_ACTIVITY'
+,p_title=>'Admin Activity'
+,p_template=>4072358936313175081
+,p_display_sequence=>30
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select to_char(l.performed_date, ''DD-Mon-YYYY HH24:MI'') as performed_on,',
+'       l.performed_by,',
+'       l.action,',
+'       nvl(c.cycle_name, case when l.cycle_id is not null then ''Cycle '' || l.cycle_id end) as cycle_name,',
+'       l.detail',
+'from xxcti_uar_admin_log l',
+'left join xxcti_uar_review_cycles c on c.cycle_id = l.cycle_id',
+'order by l.performed_date desc, l.log_id desc'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>25
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No admin actions recorded yet.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001201)
+,p_query_column_id=>1
+,p_column_alias=>'PERFORMED_ON'
+,p_column_display_sequence=>1
+,p_column_heading=>'When'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001202)
+,p_query_column_id=>2
+,p_column_alias=>'PERFORMED_BY'
+,p_column_display_sequence=>2
+,p_column_heading=>'Who'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001203)
+,p_query_column_id=>3
+,p_column_alias=>'ACTION'
+,p_column_display_sequence=>3
+,p_column_heading=>'Action'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001204)
+,p_query_column_id=>4
+,p_column_alias=>'CYCLE_NAME'
+,p_column_display_sequence=>4
+,p_column_heading=>'Cycle'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001205)
+,p_query_column_id=>5
+,p_column_alias=>'DETAIL'
+,p_column_display_sequence=>5
+,p_column_heading=>'Detail'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
 );
 end;
 /
@@ -2231,13 +2596,9 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Add Admin'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''ADD_ADMIN'' then',
-'   begin',
-'      insert into xxcti_uar_admins (email_address) values (:P7_EMAIL);',
-'      commit;',
-'   exception',
-'      when dup_val_on_index then',
-'         null;',
-'   end;',
+'   xxcti_uar_security_pkg.add_admin(:P7_EMAIL);',
+'   apex_application.g_print_success_message := lower(trim(:P7_EMAIL)) || '' was added as an admin.'';',
+'   :P7_EMAIL := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
@@ -2251,11 +2612,9 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_name=>'Remove Admin'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'if :REQUEST = ''REMOVE_ADMIN'' then',
-'   if upper(:P7_EMAIL) = upper(sys_context(''APEX$SESSION'',''APP_USER'')) then',
-'      raise_application_error(-20002, ''You cannot remove your own admin access from here.'');',
-'   end if;',
-'   delete from xxcti_uar_admins where upper(email_address) = upper(:P7_EMAIL);',
-'   commit;',
+'   xxcti_uar_security_pkg.remove_admin(:P7_EMAIL);',
+'   apex_application.g_print_success_message := lower(trim(:P7_EMAIL)) || '' was removed from the admin list.'';',
+'   :P7_EMAIL := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'

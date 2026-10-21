@@ -7,6 +7,7 @@
 -- ============================================================================
 
 @@01_uar_schema_ddl.sql
+@@01b_uar_release_hardening.sql   -- must run before 02 (views/log table the packages use)
 @@02_uar_packages.sql
 -- @@03_uar_migration_legacy_audit.sql   -- optional, uncomment if wanted
 
