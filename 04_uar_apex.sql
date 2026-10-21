@@ -83,7 +83,7 @@ wwv_imp_workspace.create_flow(
 ,p_flow_language=>'en'
 ,p_flow_language_derived_from=>'FLOW_PRIMARY_LANGUAGE'
 ,p_allow_feedback_yn=>'Y'
-,p_date_format=>'DS'
+,p_date_format=>'DD-Mon-YYYY'
 ,p_timestamp_format=>'DS'
 ,p_timestamp_tz_format=>'DS'
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
@@ -96,6 +96,7 @@ wwv_imp_workspace.create_flow(
 ,p_flow_status=>'AVAILABLE_W_EDIT_LINK'
 ,p_flow_unavailable_text=>'This application is currently unavailable at this time.'
 ,p_error_handling_function=>'xxcti_uar_error_handler'
+,p_max_session_idle_sec=>1800
 ,p_exact_substitutions_only=>'Y'
 ,p_browser_cache=>'N'
 ,p_browser_frame=>'D'
@@ -163,6 +164,14 @@ wwv_flow_imp_shared.create_list_item(
 ,p_list_item_link_text=>'Audit History'
 ,p_list_item_link_target=>'f?p=&APP_ID.:4:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-database-lock'
+,p_list_item_current_type=>'TARGET_PAGE'
+);
+wwv_flow_imp_shared.create_list_item(
+ p_id=>wwv_flow_imp.id(9700000000000027)
+,p_list_item_display_sequence=>35
+,p_list_item_link_text=>'Reviewer Assignments'
+,p_list_item_link_target=>'f?p=&APP_ID.:5:&SESSION.::&DEBUG.::::'
+,p_list_item_icon=>'fa-users'
 ,p_list_item_current_type=>'TARGET_PAGE'
 );
 wwv_flow_imp_shared.create_list_item(
@@ -344,6 +353,26 @@ wwv_flow_imp_page.create_page(
 ,p_protection_level=>'D'
 );
 wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001300)
+,p_plug_name=>'Shared Styles'
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.uar-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;line-height:18px;white-space:nowrap;}'');',
+'htp.p(''.uar-badge--ok{background:#DCFCE7;color:#14532D;}'');',
+'htp.p(''.uar-badge--bad{background:#FEE2E2;color:#7F1D1D;}'');',
+'htp.p(''.uar-badge--wait{background:#FFF4CC;color:#5C4400;}'');',
+'htp.p(''.uar-badge--info{background:#E6EEF7;color:#1E3A5F;}'');',
+'htp.p(''.uar-badge--ok::before{content:"\2713\00a0";}'');',
+'htp.p(''.uar-badge--bad::before{content:"\2717\00a0";}'');',
+'htp.p(''.uar-badge--wait::before{content:"\2022\00a0";}'');',
+'htp.p(''.uar-pct{display:flex;align-items:center;gap:8px;min-width:130px;}'');',
+'htp.p(''.uar-pct-track{flex:1;background:#E2E2E2;border-radius:6px;height:10px;overflow:hidden;}'');',
+'htp.p(''.uar-pct-fill{height:100%;background:#1A7C4F;}'');',
+'htp.p(''</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000600)
 ,p_plug_name=>'Role-Based Nav Hiding'
 ,p_plug_display_sequence=>10
@@ -353,10 +382,12 @@ wwv_flow_imp_page.create_page_plug(
 '   htp.p(''<style>'');',
 '   htp.p(''li:has(a[href*="review-cycles" i]):not(.t-Header-logo-link),'');',
 '   htp.p(''li:has(a[href*="audit-history" i]):not(.t-Header-logo-link),'');',
+'   htp.p(''li:has(a[href*="reviewer-assignments" i]):not(.t-Header-logo-link),'');',
 '   htp.p(''li:has(a[href*="admin-users" i]):not(.t-Header-logo-link)'');',
 '   htp.p(''{ display:none!important; }'');',
 '   htp.p(''a[href*="review-cycles" i]:not(.t-Header-logo-link),'');',
 '   htp.p(''a[href*="audit-history" i]:not(.t-Header-logo-link),'');',
+'   htp.p(''a[href*="reviewer-assignments" i]:not(.t-Header-logo-link),'');',
 '   htp.p(''a[href*="admin-users" i]:not(.t-Header-logo-link)'');',
 '   htp.p(''{ display:none!important; }'');',
 '   htp.p(''</style>'');',
@@ -557,7 +588,7 @@ wwv_flow_imp_page.create_page_plug(
 '         end if;',
 '',
 '         htp.p(''<div class="uar-due-banner" style="margin:0 0 16px;font-size:1rem;">'');',
-'         htp.p(''Complete Review By: <strong>'' || to_char(l_due_date,''Mon DD, YYYY'') || ''</strong>'');',
+'         htp.p(''Complete Review By: <strong>'' || to_char(l_due_date,''DD-Mon-YYYY'') || ''</strong>'');',
 '         htp.p('' &mdash; <strong style="color:'' || l_color || '';">'' || l_label || ''</strong>'');',
 '         htp.p(''</div>'');',
 '      end if;',
@@ -653,7 +684,7 @@ wwv_flow_imp_page.create_page_plug(
 '      l_hue := round(nvl(l_pct, 0) * 1.2);',
 '      htp.p(''<div style="margin:0 0 4px;font-size:.9rem;">'' || l_completed || '' of '' || l_total ||',
 '            '' items reviewed ('' || round(nvl(l_pct,0)) || ''%)</div>'');',
-'      htp.p(''<div style="background:#E2E2E2;border-radius:6px;height:18px;width:100%;overflow:hidden;">'');',
+'      htp.p(''<div role="progressbar" aria-label="Review progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'' || round(nvl(l_pct,0)) || ''" style="background:#E2E2E2;border-radius:6px;height:18px;width:100%;overflow:hidden;">'');',
 '      htp.p(''<div style="background:hsl('' || l_hue || '',70%,45%);height:100%;width:'' ||',
 '            round(nvl(l_pct,0)) || ''%;transition:width .3s;"></div>'');',
 '      htp.p(''</div>'');',
@@ -680,7 +711,7 @@ wwv_flow_imp_page.create_page_plug(
 '            l_submitted_date := null;',
 '         end;',
 '         htp.p(''<div class="uar-submit-status" style="background:#EAF4EC;border-left:3px solid #1A7C4F;padding:10px 14px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'         htp.p(''You submitted your review on <strong>'' || to_char(l_submitted_date,''Mon DD, YYYY'') || ''</strong>. An admin can reopen it if you need to make a change.'');',
+'         htp.p(''You submitted your review on <strong>'' || to_char(l_submitted_date,''DD-Mon-YYYY'') || ''</strong>. An admin can reopen it if you need to make a change.'');',
 '         htp.p(''</div>'');',
 '      elsif :P1_CAN_SUBMIT is null then',
 '         htp.p(''<div class="uar-submit-status" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:10px 14px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
@@ -765,7 +796,7 @@ wwv_flow_imp_page.create_page_plug(
 ')',
 'select distinct',
 '    uwe.employee_id,',
-'    uwe.employee_legal_first_name,',
+'    nvl(uwe.employee_legal_first_name, ''(not in Workday data)'') as employee_legal_first_name,',
 '    uwe.employee_legal_last_name,',
 '    ri.user_name,',
 '    comp.review_complete,',
@@ -774,8 +805,9 @@ wwv_flow_imp_page.create_page_plug(
 '       p_items => ''P2_EMPLOYEE_ID,P2_CYCLE_ID'',',
 '       p_values => to_char(uwe.employee_id) || '','' || to_char(:P1_CYCLE_ID),',
 '       p_clear_cache => ''2''',
-'    ) as employee_url',
-'from xxcti_uar_workday_employee_mgr uwe',
+'    ) as employee_url,',
+'    case when comp.review_complete = ''Yes'' then ''ok'' else ''wait'' end as review_class',
+'from xxcti_uar_effective_mgr uwe',
 'join xxcti_uar_review_items ri',
 '  on to_char(uwe.employee_id) = ri.employee_number',
 'left join completeness comp',
@@ -848,6 +880,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>5
 ,p_column_identifier=>'E'
 ,p_column_label=>'Review Complete'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#REVIEW_CLASS#">#REVIEW_COMPLETE#</span>'
 ,p_column_type=>'STRING'
 ,p_column_alignment=>'CENTER'
 ,p_tz_dependent=>'N'
@@ -864,6 +897,17 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001310)
+,p_db_column_name=>'REVIEW_CLASS'
+,p_display_order=>100
+,p_column_identifier=>'G'
+,p_column_label=>'Review Class'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000297)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -871,7 +915,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar1rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'EMPLOYEE_ID:EMPLOYEE_LEGAL_FIRST_NAME:EMPLOYEE_LEGAL_LAST_NAME:USER_NAME:REVIEW_COMPLETE:EMPLOYEE_URL'
+,p_report_columns=>'EMPLOYEE_ID:EMPLOYEE_LEGAL_FIRST_NAME:EMPLOYEE_LEGAL_LAST_NAME:USER_NAME:REVIEW_COMPLETE:EMPLOYEE_URL:REVIEW_CLASS'
 );
 end;
 /
@@ -997,6 +1041,7 @@ wwv_flow_imp_page.create_page_plug(
 '       ri.application,',
 '       ri.last_logon,',
 '       nvl(ri.approval, ''Pending'') as approval_display,',
+'       case ri.approval when ''Approved'' then ''ok'' when ''Denied'' then ''bad'' else ''wait'' end as approval_class,',
 '       ri.comments,',
 '       ri.review_item_id,',
 '       apex_page.get_url(',
@@ -1055,7 +1100,8 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>3
 ,p_column_identifier=>'C'
 ,p_column_label=>'Last Used'
-,p_column_type=>'STRING'
+,p_column_type=>'DATE'
+,p_format_mask=>'DD-Mon-YYYY'
 ,p_heading_alignment=>'LEFT'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
@@ -1066,6 +1112,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>4
 ,p_column_identifier=>'D'
 ,p_column_label=>'Approval'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#APPROVAL_CLASS#">#APPROVAL_DISPLAY#</span>'
 ,p_column_type=>'STRING'
 ,p_heading_alignment=>'LEFT'
 ,p_tz_dependent=>'N'
@@ -1137,6 +1184,17 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001311)
+,p_db_column_name=>'APPROVAL_CLASS'
+,p_display_order=>101
+,p_column_identifier=>'K'
+,p_column_label=>'Approval Class'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000341)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -1144,7 +1202,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar2rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:REVIEW_ITEM_ID:COMMENTS:DENY_URL:LOCKED_DISPLAY:UNLOCKED_DISPLAY:UNDO_DISPLAY'
+,p_report_columns=>'RESPONSIBILITY:APPLICATION:LAST_LOGON:APPROVAL_DISPLAY:REVIEW_ITEM_ID:COMMENTS:DENY_URL:LOCKED_DISPLAY:UNLOCKED_DISPLAY:UNDO_DISPLAY:APPROVAL_CLASS'
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(9700000000000395)
@@ -1355,6 +1413,7 @@ wwv_flow_imp_page.create_page_plug(
 '                    order by c desc) loop',
 '            htp.p(''<li>'' || r.c || '' &ndash; '' || apex_escape.html(r.reason) || '' (for example employee '' || apex_escape.html(r.ex) || '')</li>'');',
 '         end loop;',
+'         htp.p(''<li><a href="'' || apex_escape.html_attribute(apex_page.get_url(p_page => 5)) || ''">Assign reviewers for these employees</a></li>'');',
 '         htp.p(''</ul></li>'');',
 '      end if;',
 '      for r in (select issue, count(*) as c, min(ref) as ex',
@@ -1637,7 +1696,8 @@ wwv_flow_imp_page.create_report_region(
 '       c.created_date,',
 '       c.closed_date,',
 '       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id) as total_items,',
-'       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id and ri.approval is not null) as completed_items',
+'       (select count(*) from xxcti_uar_review_items ri where ri.cycle_id = c.cycle_id and ri.approval is not null) as completed_items,',
+'       case c.status when ''OPEN'' then ''ok'' else ''info'' end as status_class',
 'from xxcti_uar_review_cycles c',
 'order by c.period_start desc'))
 ,p_ajax_enabled=>'Y'
@@ -1713,6 +1773,7 @@ wwv_flow_imp_page.create_report_columns(
 ,p_column_heading=>'Status'
 ,p_heading_alignment=>'LEFT'
 ,p_derived_column=>'N'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#STATUS_CLASS#">#STATUS#</span>'
 ,p_include_in_export=>'Y'
 );
 wwv_flow_imp_page.create_report_columns(
@@ -1756,6 +1817,17 @@ wwv_flow_imp_page.create_report_columns(
 ,p_heading_alignment=>'RIGHT'
 ,p_derived_column=>'N'
 ,p_include_in_export=>'Y'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001313)
+,p_query_column_id=>11
+,p_column_alias=>'STATUS_CLASS'
+,p_column_display_sequence=>11
+,p_column_heading=>'Status Class'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_display_as=>'HIDDEN'
+,p_include_in_export=>'N'
 );
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000530)
@@ -1824,7 +1896,8 @@ wwv_flow_imp_page.create_page_process(
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000000440)
 ,p_plug_name=>'P3_MANAGER_COMPLETION'
-,p_plug_template=>2100526641005906379
+,p_title=>'Manager Completion'
+,p_plug_template=>4072358936313175081
 ,p_plug_display_sequence=>40
 ,p_query_type=>'SQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
@@ -1835,6 +1908,7 @@ wwv_flow_imp_page.create_page_plug(
 '       cp.pct_complete,',
 '       case when so.manager_id is not null then ''Yes'' else ''No'' end as submitted,',
 '       so.submitted_date,',
+'       case when so.manager_id is not null then ''ok'' else ''wait'' end as submitted_class,',
 '       apex_page.get_url(',
 '          p_page => 1,',
 '          p_items => ''P1_MANAGER'',',
@@ -1915,8 +1989,9 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>5
 ,p_column_identifier=>'E'
 ,p_column_label=>'% Complete'
+,p_column_html_expression=>'<div class="uar-pct"><div class="uar-pct-track"><div class="uar-pct-fill" style="width:#PCT_COMPLETE#%"></div></div><span>#PCT_COMPLETE#%</span></div>'
 ,p_column_type=>'NUMBER'
-,p_column_alignment=>'RIGHT'
+,p_column_alignment=>'LEFT'
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
@@ -1926,6 +2001,7 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_display_order=>6
 ,p_column_identifier=>'F'
 ,p_column_label=>'Submitted'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#SUBMITTED_CLASS#">#SUBMITTED#</span>'
 ,p_column_type=>'STRING'
 ,p_column_alignment=>'CENTER'
 ,p_tz_dependent=>'N'
@@ -1954,6 +2030,17 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001312)
+,p_db_column_name=>'SUBMITTED_CLASS'
+,p_display_order=>100
+,p_column_identifier=>'I'
+,p_column_label=>'Submitted Class'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000549)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -1961,7 +2048,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar3rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'MANAGER_NAME:EMAIL_ADDRESS:TOTAL_ITEMS:COMPLETED_ITEMS:PCT_COMPLETE:SUBMITTED:SUBMITTED_DATE:MANAGER_URL'
+,p_report_columns=>'MANAGER_NAME:EMAIL_ADDRESS:TOTAL_ITEMS:COMPLETED_ITEMS:PCT_COMPLETE:SUBMITTED:SUBMITTED_DATE:MANAGER_URL:SUBMITTED_CLASS'
 );
 end;
 /
@@ -2008,28 +2095,28 @@ wwv_flow_imp_page.create_page_plug(
 '       ri.review_item_id,',
 '       ri.user_name,',
 '       ri.employee_number,',
-'       uwem.employee_legal_first_name || '' '' || uwem.employee_legal_last_name as employee_name,',
+'       nvl(trim(uwem.employee_legal_first_name || '' '' || uwem.employee_legal_last_name), ri.user_name) as employee_name,',
 '       ri.responsibility,',
 '       ri.application,',
 '       ri.start_date,',
 '       ri.end_date,',
 '       ri.approval,',
+'       nvl(ri.approval, ''Pending'') as decision,',
+'       case ri.approval when ''Approved'' then ''ok'' when ''Denied'' then ''bad'' else ''wait'' end as decision_class,',
 '       ri.approver,',
 '       ri.approval_date,',
 '       ri.last_logon,',
 '       ri.comments,',
 '       uwem.manager_first_name,',
 '       uwem.manager_last_name,',
-'       uwem.manager_first_name || '' '' || uwem.manager_last_name as manager_name,',
+'       trim(uwem.manager_first_name || '' '' || uwem.manager_last_name) as manager_name,',
 '       uwem.manager_id,',
-'       b.email_address as manager_email',
+'       uwem.manager_email',
 'from xxcti_uar_review_items ri',
 'join xxcti_uar_review_cycles cy',
 '  on ri.cycle_id = cy.cycle_id',
-'join xxcti_uar_workday_employee_mgr uwem',
+'left join xxcti_uar_effective_mgr uwem',
 '  on ri.employee_number = to_char(uwem.employee_id)',
-'left join xxcti_uar_workday_employee_mgr b',
-'  on uwem.manager_id = b.employee_id',
 'order by cy.period_start desc, ri.approval_date desc nulls last'))
 ,p_plug_source_type=>'NATIVE_IR'
 );
@@ -2270,6 +2357,28 @@ wwv_flow_imp_page.create_worksheet_column(
 ,p_tz_dependent=>'N'
 ,p_use_as_row_header=>'N'
 );
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001130)
+,p_db_column_name=>'DECISION'
+,p_display_order=>21
+,p_column_identifier=>'U'
+,p_column_label=>'Decision'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#DECISION_CLASS#">#DECISION#</span>'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001131)
+,p_db_column_name=>'DECISION_CLASS'
+,p_display_order=>22
+,p_column_identifier=>'V'
+,p_column_label=>'Decision Class'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
 wwv_flow_imp_page.create_worksheet_rpt(
  p_id=>wwv_flow_imp.id(9700000000000518)
 ,p_application_user=>'APXWS_DEFAULT'
@@ -2277,7 +2386,7 @@ wwv_flow_imp_page.create_worksheet_rpt(
 ,p_report_alias=>'uar4rpt'
 ,p_status=>'PUBLIC'
 ,p_is_default=>'Y'
-,p_report_columns=>'CYCLE_NAME:EMPLOYEE_NAME:USER_NAME:RESPONSIBILITY:APPLICATION:APPROVAL:APPROVER:APPROVAL_DATE:COMMENTS:MANAGER_NAME'
+,p_report_columns=>'CYCLE_NAME:EMPLOYEE_NAME:USER_NAME:RESPONSIBILITY:APPLICATION:DECISION:APPROVER:APPROVAL_DATE:COMMENTS:MANAGER_NAME:DECISION_CLASS'
 );
 wwv_flow_imp_page.create_report_region(
  p_id=>wwv_flow_imp.id(9700000000001100)
@@ -2485,6 +2594,442 @@ wwv_flow_imp_page.create_report_columns(
 ,p_column_heading=>'Detail'
 ,p_heading_alignment=>'LEFT'
 ,p_derived_column=>'N'
+);
+end;
+/
+prompt --application/pages/page_00005
+begin
+wwv_flow_imp_page.create_page(
+ p_id=>5
+,p_name=>'Reviewer Assignments'
+,p_alias=>'REVIEWER-ASSIGNMENTS'
+,p_step_title=>'Reviewer Assignments'
+,p_autocomplete_on_off=>'OFF'
+,p_page_template_options=>'#DEFAULT#'
+,p_required_role=>wwv_flow_imp.id(9700000000000051)
+,p_protection_level=>'C'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001400)
+,p_plug_name=>'P5_TITLE'
+,p_title=>'Reviewer Assignments'
+,p_icon_css_classes=>'fa-users'
+,p_region_template_options=>'#DEFAULT#:t-HeroRegion--noPadding'
+,p_plug_template=>2674017834225413037
+,p_plug_display_sequence=>1
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001401)
+,p_plug_name=>'P5_FIELD_WIDTH_CSS'
+,p_plug_display_sequence=>5
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<style>'');',
+'htp.p(''.t-Form-fieldContainer input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),'');',
+'htp.p(''.t-Form-fieldContainer select'');',
+'htp.p(''{ max-width:520px; width:520px; }'');',
+'htp.p(''.t-HeroRegion:has(.fa-users){margin-bottom:3em;}'');',
+'htp.p(''</style>'');'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001402)
+,p_plug_name=>'P5_EXPLAINER'
+,p_plug_display_sequence=>6
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'htp.p(''<strong>Workday decides who reviews whom.</strong> Use this page only for employees Workday gives no usable reviewer: '');',
+'htp.p(''people at the top of the hierarchy, people whose manager is missing from the data, and people who have left Workday but still have access. '');',
+'htp.p(''An assigned reviewer sees these employees under My Team Review, including in the open cycle. '');',
+'htp.p(''The reviewer cannot report to the employee, and an assignment stops being used as soon as Workday supplies a manager.'');',
+'htp.p(''</div>'');'))
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000001410)
+,p_name=>'P5_UNASSIGNED'
+,p_title=>'Employees Without a Reviewer'
+,p_template=>4072358936313175081
+,p_display_sequence=>10
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select employee_number, employee_name, oracle_user, reason, responsibilities',
+'from xxcti_uar_unassigned_employees',
+'order by employee_name, employee_number'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>50
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'Every employee in the responsibilities data has a reviewer.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001411)
+,p_query_column_id=>1
+,p_column_alias=>'EMPLOYEE_NUMBER'
+,p_column_display_sequence=>1
+,p_column_heading=>'Employee Number'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001412)
+,p_query_column_id=>2
+,p_column_alias=>'EMPLOYEE_NAME'
+,p_column_display_sequence=>2
+,p_column_heading=>'Employee'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001413)
+,p_query_column_id=>3
+,p_column_alias=>'ORACLE_USER'
+,p_column_display_sequence=>3
+,p_column_heading=>'Oracle User'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001414)
+,p_query_column_id=>4
+,p_column_alias=>'REASON'
+,p_column_display_sequence=>4
+,p_column_heading=>'Why There Is No Reviewer'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001415)
+,p_query_column_id=>5
+,p_column_alias=>'RESPONSIBILITIES'
+,p_column_display_sequence=>5
+,p_column_heading=>'Responsibilities'
+,p_column_alignment=>'RIGHT'
+,p_heading_alignment=>'RIGHT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001420)
+,p_plug_name=>'P5_ASSIGN'
+,p_title=>'Assign a Reviewer'
+,p_icon_css_classes=>'fa-lg fa-user-plus'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>20
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001421)
+,p_name=>'P5_EMPLOYEE_ID'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001420)
+,p_prompt=>'Employee'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select employee_name || '' ('' || employee_number || '') - '' || reason as d, employee_number as r',
+'from xxcti_uar_unassigned_employees',
+'order by employee_name, employee_number'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select an employee -'
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001422)
+,p_name=>'P5_REVIEWER_ID'
+,p_item_sequence=>20
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001420)
+,p_prompt=>'Reviewer'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select w.last_name || '', '' || w.first_name || '' - '' || w.email as d, w.employee_id as r',
+'from (select employee_id,',
+'             min(employee_legal_first_name) as first_name,',
+'             min(employee_legal_last_name)  as last_name,',
+'             min(email_address)             as email',
+'      from xxcti_uar_workday_employee_mgr',
+'      where email_address is not null',
+'      group by employee_id) w',
+'order by 1'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select a reviewer -'
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001423)
+,p_name=>'P5_REASON'
+,p_item_sequence=>30
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001420)
+,p_prompt=>'Reason (optional)'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>40
+,p_cMaxlength=>400
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000001424)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000001420)
+,p_button_name=>'ASSIGN_REVIEWER'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Assign Reviewer'
+,p_button_position=>'CREATE'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000001425)
+,p_process_sequence=>10
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Assign Reviewer'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_name   varchar2(400);',
+'   l_cycle  number := xxcti_uar_cycle_pkg.current_open_cycle;',
+'   l_signed varchar2(1) := ''N'';',
+'begin',
+'   if :REQUEST = ''ASSIGN_REVIEWER'' then',
+'      xxcti_uar_security_pkg.assign_reviewer(to_number(:P5_EMPLOYEE_ID), to_number(:P5_REVIEWER_ID), :P5_REASON);',
+'      select min(employee_legal_first_name || '' '' || employee_legal_last_name)',
+'        into l_name',
+'        from xxcti_uar_workday_employee_mgr',
+'       where employee_id = to_number(:P5_REVIEWER_ID);',
+'      if l_cycle is not null then',
+'         l_signed := xxcti_uar_cycle_pkg.manager_signed_off(l_cycle, to_number(:P5_REVIEWER_ID));',
+'      end if;',
+'      apex_application.g_print_success_message :=',
+'         ''Reviewer assigned: '' || l_name || '' will now see this employee under My Team Review.'' ||',
+'         case when l_signed = ''Y''',
+'              then '' Note: '' || l_name || '' has already submitted a review for the open cycle -- reopen their submission from Review Cycles so they can review this employee.''',
+'         end;',
+'      :P5_EMPLOYEE_ID := null;',
+'      :P5_REVIEWER_ID := null;',
+'      :P5_REASON      := null;',
+'   end if;',
+'end;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000001425
+);
+wwv_flow_imp_page.create_report_region(
+ p_id=>wwv_flow_imp.id(9700000000001430)
+,p_name=>'P5_ASSIGNMENTS'
+,p_title=>'Current Assignments'
+,p_template=>4072358936313175081
+,p_display_sequence=>30
+,p_region_template_options=>'#DEFAULT#'
+,p_component_template_options=>'#DEFAULT#:t-Report--stretch:t-Report--staticRowColors:t-Report--rowHighlight'
+,p_source_type=>'NATIVE_SQL_REPORT'
+,p_query_type=>'SQL'
+,p_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select o.employee_id,',
+'       nvl(trim(w.employee_name), ''(not in Workday data)'') as employee_name,',
+'       rv.reviewer_name,',
+'       rv.email_address as reviewer_email,',
+'       o.reason,',
+'       to_char(o.assigned_date, ''DD-Mon-YYYY'') as assigned_on,',
+'       o.assigned_by,',
+'       case when e.manager_source = ''ASSIGNED'' then ''Active'' else ''Not used - Workday now has a manager'' end as status,',
+'       case when e.manager_source = ''ASSIGNED'' then ''ok'' else ''info'' end as status_class',
+'from xxcti_uar_reviewer_overrides o',
+'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as employee_name',
+'            from xxcti_uar_workday_employee_mgr group by employee_id) w on w.employee_id = o.employee_id',
+'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as reviewer_name,',
+'                  min(email_address) as email_address',
+'            from xxcti_uar_workday_employee_mgr group by employee_id) rv on rv.employee_id = o.reviewer_id',
+'left join (select employee_id, max(manager_source) as manager_source',
+'            from xxcti_uar_effective_mgr group by employee_id) e on e.employee_id = o.employee_id',
+'order by o.assigned_date desc, o.employee_id'))
+,p_ajax_enabled=>'Y'
+,p_lazy_loading=>false
+,p_query_row_template=>2538654340625403440
+,p_query_num_rows=>50
+,p_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_query_no_data_found=>'No reviewers have been assigned.'
+,p_query_num_rows_type=>'NEXT_PREVIOUS_LINKS'
+,p_query_row_count_max=>500
+,p_pagination_display_position=>'BOTTOM_RIGHT'
+,p_sort_null=>'L'
+,p_plug_query_strip_html=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001431)
+,p_query_column_id=>1
+,p_column_alias=>'EMPLOYEE_ID'
+,p_column_display_sequence=>1
+,p_column_heading=>'Employee Id'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001432)
+,p_query_column_id=>2
+,p_column_alias=>'EMPLOYEE_NAME'
+,p_column_display_sequence=>2
+,p_column_heading=>'Employee'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001433)
+,p_query_column_id=>3
+,p_column_alias=>'REVIEWER_NAME'
+,p_column_display_sequence=>3
+,p_column_heading=>'Reviewer'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001434)
+,p_query_column_id=>4
+,p_column_alias=>'REVIEWER_EMAIL'
+,p_column_display_sequence=>4
+,p_column_heading=>'Reviewer Email'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001435)
+,p_query_column_id=>5
+,p_column_alias=>'REASON'
+,p_column_display_sequence=>5
+,p_column_heading=>'Reason'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001436)
+,p_query_column_id=>6
+,p_column_alias=>'ASSIGNED_ON'
+,p_column_display_sequence=>6
+,p_column_heading=>'Assigned On'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001437)
+,p_query_column_id=>7
+,p_column_alias=>'ASSIGNED_BY'
+,p_column_display_sequence=>7
+,p_column_heading=>'Assigned By'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001438)
+,p_query_column_id=>8
+,p_column_alias=>'STATUS'
+,p_column_display_sequence=>8
+,p_column_heading=>'Status'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_column_html_expression=>'<span class="uar-badge uar-badge--#STATUS_CLASS#">#STATUS#</span>'
+);
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001439)
+,p_query_column_id=>9
+,p_column_alias=>'STATUS_CLASS'
+,p_column_display_sequence=>9
+,p_column_heading=>'Status Class'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+,p_display_as=>'HIDDEN'
+,p_include_in_export=>'N'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001440)
+,p_plug_name=>'P5_REMOVE'
+,p_title=>'Remove an Assignment'
+,p_icon_css_classes=>'fa-lg fa-user-times'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>40
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001441)
+,p_name=>'P5_REMOVE_EMPLOYEE_ID'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001440)
+,p_prompt=>'Assignment'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select nvl(trim(w.employee_name), ''Employee '' || o.employee_id) || '' ('' || o.employee_id || '') reviewed by '' ||',
+'       nvl(rv.reviewer_name, to_char(o.reviewer_id)) as d,',
+'       o.employee_id as r',
+'from xxcti_uar_reviewer_overrides o',
+'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as employee_name',
+'            from xxcti_uar_workday_employee_mgr group by employee_id) w on w.employee_id = o.employee_id',
+'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as reviewer_name',
+'            from xxcti_uar_workday_employee_mgr group by employee_id) rv on rv.employee_id = o.reviewer_id',
+'order by 1'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select an assignment -'
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000001442)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000001440)
+,p_button_name=>'REMOVE_ASSIGNMENT'
+,p_button_action=>'DEFINED_BY_DA'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_image_alt=>'Remove Assignment'
+,p_button_position=>'CREATE'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(9700000000001443)
+,p_name=>'Confirm Remove Assignment'
+,p_event_sequence=>10
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_imp.id(9700000000001442)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(9700000000001444)
+,p_event_id=>wwv_flow_imp.id(9700000000001443)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'if(confirm("Remove this reviewer assignment? The employee will have no reviewer again until you assign one.")){apex.submit("REMOVE_ASSIGNMENT");}'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000001445)
+,p_process_sequence=>20
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Remove Assignment'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'if :REQUEST = ''REMOVE_ASSIGNMENT'' then',
+'   if :P5_REMOVE_EMPLOYEE_ID is null then',
+'      raise_application_error(-20019, ''Select an assignment first.'');',
+'   end if;',
+'   xxcti_uar_security_pkg.remove_reviewer(to_number(:P5_REMOVE_EMPLOYEE_ID));',
+'   apex_application.g_print_success_message := ''Assignment removed.'';',
+'   :P5_REMOVE_EMPLOYEE_ID := null;',
+'end if;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000001445
 );
 end;
 /

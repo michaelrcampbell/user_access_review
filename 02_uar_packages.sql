@@ -52,6 +52,18 @@ create or replace package xxcti_uar_security_pkg as
     procedure add_admin(p_email in varchar2);
     procedure remove_admin(p_email in varchar2);
 
+    -- Reviewer assignments (Page 5): give an employee Workday has no usable
+    -- manager for (none, manager missing, or not in the feed) a reviewer. Admin
+    -- only. Refused when Workday already provides a reviewer, when the reviewer
+    -- is the employee, has no email on file, or reports (directly or
+    -- indirectly) to the employee -- the review must be independent. Logged.
+    procedure assign_reviewer(
+        p_employee_id in number,
+        p_reviewer_id in number,
+        p_reason      in varchar2 default null
+    );
+    procedure remove_reviewer(p_employee_id in number);
+
 end xxcti_uar_security_pkg;
 /
 show errors
@@ -108,7 +120,7 @@ create or replace package body xxcti_uar_security_pkg as
 
         select to_char(manager_id)
           into l_manager_id
-          from xxcti_uar_workday_employee_mgr
+          from xxcti_uar_effective_mgr
          where to_char(employee_id) = p_employee_id;
 
         return case
@@ -176,6 +188,108 @@ create or replace package body xxcti_uar_security_pkg as
         log_action('REMOVE_ADMIN', null, l_email);
         commit;
     end remove_admin;
+
+    procedure assign_reviewer(
+        p_employee_id in number,
+        p_reviewer_id in number,
+        p_reason      in varchar2 default null
+    ) is
+        l_n      number;
+        l_old    number;
+        l_reason varchar2(400) := substr(trim(p_reason), 1, 400);
+        l_emp    varchar2(400);
+        l_rev    varchar2(400);
+    begin
+        require_admin;
+
+        if p_employee_id is null or p_reviewer_id is null then
+            raise_application_error(-20066, 'Choose both an employee and a reviewer.');
+        end if;
+        if p_employee_id = p_reviewer_id then
+            raise_application_error(-20060, 'Nobody can be their own reviewer.');
+        end if;
+
+        select count(*) into l_n
+          from xxcti_uar_workday_employee_mgr
+         where employee_id = p_reviewer_id and email_address is not null;
+        if l_n = 0 then
+            raise_application_error(-20061,
+                'The reviewer must be an employee with an email address on file, so they can sign in.');
+        end if;
+
+        select count(*) into l_n from (
+            select 1 from xxcti_uar_workday_employee_mgr where employee_id = p_employee_id
+            union all
+            select 1 from xxcti_uar_employee_responsibilities where employee_number = to_char(p_employee_id));
+        if l_n = 0 then
+            raise_application_error(-20063,
+                'That employee is not in the Workday data or the responsibilities data.');
+        end if;
+
+        select count(*) into l_n
+          from xxcti_uar_effective_mgr
+         where employee_id = p_employee_id and manager_source = 'WORKDAY';
+        if l_n > 0 then
+            raise_application_error(-20062,
+                'Workday already provides a reviewer for this employee, so one cannot be assigned here.');
+        end if;
+
+        -- independence: the reviewer's own management chain must not contain the employee
+        select count(*) into l_n from (
+            select employee_id
+              from xxcti_uar_workday_employee_mgr
+             start with employee_id = p_reviewer_id
+           connect by nocycle prior manager_id = employee_id)
+         where employee_id = p_employee_id;
+        if l_n > 0 then
+            raise_application_error(-20064,
+                'That reviewer reports (directly or indirectly) to this employee, so the review would not be independent.');
+        end if;
+
+        select nvl(min(employee_legal_first_name || ' ' || employee_legal_last_name), to_char(p_employee_id))
+          into l_emp from xxcti_uar_workday_employee_mgr where employee_id = p_employee_id;
+        select min(employee_legal_first_name || ' ' || employee_legal_last_name)
+          into l_rev from xxcti_uar_workday_employee_mgr where employee_id = p_reviewer_id;
+
+        begin
+            select reviewer_id into l_old from xxcti_uar_reviewer_overrides where employee_id = p_employee_id;
+            update xxcti_uar_reviewer_overrides
+               set reviewer_id   = p_reviewer_id,
+                   reason        = l_reason,
+                   assigned_by   = coalesce(sys_context('APEX$SESSION','APP_USER'), user),
+                   assigned_date = sysdate
+             where employee_id = p_employee_id;
+            log_action('CHANGE_REVIEWER', null,
+                l_emp || ' (' || p_employee_id || '): reviewer ' || l_old || ' -> ' || l_rev || ' (' || p_reviewer_id || ')' ||
+                case when l_reason is not null then '. ' || l_reason end);
+        exception
+            when no_data_found then
+                insert into xxcti_uar_reviewer_overrides (employee_id, reviewer_id, reason)
+                values (p_employee_id, p_reviewer_id, l_reason);
+                log_action('ASSIGN_REVIEWER', null,
+                    l_emp || ' (' || p_employee_id || ') -> reviewer ' || l_rev || ' (' || p_reviewer_id || ')' ||
+                    case when l_reason is not null then '. ' || l_reason end);
+        end;
+        commit;
+    end assign_reviewer;
+
+    procedure remove_reviewer(p_employee_id in number) is
+        l_rev number;
+    begin
+        require_admin;
+
+        begin
+            select reviewer_id into l_rev from xxcti_uar_reviewer_overrides where employee_id = p_employee_id;
+        exception
+            when no_data_found then
+                raise_application_error(-20065, 'That employee has no assigned reviewer.');
+        end;
+
+        delete from xxcti_uar_reviewer_overrides where employee_id = p_employee_id;
+        log_action('REMOVE_REVIEWER', null,
+            'Employee ' || p_employee_id || ': removed assigned reviewer ' || l_rev || '.');
+        commit;
+    end remove_reviewer;
 
 end xxcti_uar_security_pkg;
 /
@@ -425,8 +539,13 @@ create or replace package body xxcti_uar_cycle_pkg as
 
         select manager_id
           into l_manager_id
-          from xxcti_uar_workday_employee_mgr
+          from xxcti_uar_effective_mgr
          where to_char(employee_id) = p_employee_number;
+
+        -- no reviewer at all (see Page 5): fail closed
+        if l_manager_id is null then
+            return 'N';
+        end if;
 
         return case when manager_signed_off(p_cycle_id, l_manager_id) = 'Y' then 'N' else 'Y' end;
     exception
@@ -445,7 +564,7 @@ create or replace package body xxcti_uar_cycle_pkg as
         end if;
 
         select count(*) into l_count
-          from xxcti_uar_workday_employee_mgr where manager_id = p_manager_id;
+          from xxcti_uar_effective_mgr where manager_id = p_manager_id;
         if l_count = 0 then
             raise_application_error(-20031, 'That manager does not exist.');
         end if;
@@ -467,7 +586,7 @@ create or replace package body xxcti_uar_cycle_pkg as
          where ri.cycle_id = p_cycle_id
            and ri.employee_number in (
                  select to_char(employee_id)
-                   from xxcti_uar_workday_employee_mgr
+                   from xxcti_uar_effective_mgr
                   where manager_id = p_manager_id);
 
         if l_total = 0 then

@@ -102,7 +102,7 @@ constraints (two open cycles, duplicate cycle names, a cycle ending before it st
 
 Sandbox only (never DEV/TEST/PROD, which have the real Workday/EBS feeds):
 `00_uar_sandbox_source_stubs.sql` + `05_uar_sandbox_seed.sql` build fake source data, and
-`07_uar_regression_tests.sql` is a 56-check regression suite. It refuses to run while any
+`07_uar_regression_tests.sql` is an 83-check regression suite. It refuses to run while any
 cycle is open, so it can never touch real review data.
 
 Then seed at least one admin (`insert into xxcti_uar_admins ...`, see the schema script),

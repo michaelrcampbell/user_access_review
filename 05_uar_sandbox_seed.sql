@@ -3,7 +3,9 @@
 -- Seeds fake org/responsibility data into the stand-in source tables created
 -- by 00_uar_sandbox_source_stubs.sql, plus the sandbox admin. Re-runnable.
 --
--- Hierarchy: 1 VP (1001) -> 5 managers (2001-2005) -> 30 employees (3001-3030).
+-- Hierarchy: 1 VP (1001) -> 5 managers (2001-2005) -> 30 employees (3001-3030),
+-- plus 1002 (no manager, outside the VP's chain) so two top-level people can be
+-- each other's assigned reviewer on Page 5. No end dates: the real feed has none.
 -- Michael Campbell is manager 2001 AND an admin, so Page 1 shows his own team
 -- and the admin pages work. Reproducible (dbms_random seeded).
 -- ============================================================================
@@ -45,7 +47,7 @@ declare
     for i in 1 .. l_n loop
       l_ix    := mod(p_id * 7 + i * 3 + trunc(dbms_random.value(0,15)), l_resp.count) + 1;
       l_start := trunc(sysdate) - trunc(dbms_random.value(30, 1800));
-      l_end   := case when dbms_random.value < 0.12 then l_start + trunc(dbms_random.value(10, 300)) end;
+      l_end   := null;   -- the real feed supplies no end dates
       insert into xxcti_uar_employee_responsibilities
         (user_name, employee_number, responsibility, application, start_date, end_date)
       values (l_user, to_char(p_id), l_resp(l_ix), l_app(l_ix), l_start, l_end);
@@ -59,6 +61,7 @@ declare
 begin
   dbms_random.seed(42);
   add_emp(1001, 'Eleanor', 'Whitfield', 'eleanor.whitfield@example.com', null, null, null);
+  add_emp(1002, 'Marcus',  'Hale',      'marcus.hale@example.com',       null, null, null);
   add_emp(2001, 'Michael', 'Campbell',  'michael.r.campbell@gmail.com',  1001, 'Eleanor', 'Whitfield');
   add_emp(2002, 'Sandra',  'Okonkwo',   'sandra.okonkwo@example.com',    1001, 'Eleanor', 'Whitfield');
   add_emp(2003, 'Brian',   'Lindqvist', 'brian.lindqvist@example.com',   1001, 'Eleanor', 'Whitfield');

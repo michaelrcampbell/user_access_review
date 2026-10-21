@@ -6,8 +6,9 @@
 --
 -- Needs: 01, 01b, 02 installed; the stand-in/real source tables populated
 -- (05_uar_sandbox_seed.sql provides: admin Michael = employee 2001; Sandra =
--- employee 2002, a non-admin manager of employee 3002; employee 3001 reports
--- to Michael); APEX app 530 imported (apex_session needs an app id).
+-- employee 2002, a non-admin manager of employee 3002; Brian = employee 2003;
+-- employee 3001 reports to Michael; Eleanor = 1001 is the top of the chain);
+-- APEX app 530 imported (apex_session needs an app id).
 --
 -- Safe by design: it REFUSES TO RUN while any cycle is open (so it can never
 -- touch real review data), creates its own cycles named "ZZ Regression A/B",
@@ -276,6 +277,88 @@ begin
             to_number(q('select count(*) from xxcti_uar_admin_log where detail=''zz.test.admin@example.com'' and action in (''ADD_ADMIN'',''REMOVE_ADMIN'') and performed_date >= to_date(''' || to_char(g_start, 'YYYY-MM-DD HH24:MI:SS') || ''', ''YYYY-MM-DD HH24:MI:SS'')')) = 2);
     as_user('SANDRA.OKONKWO@EXAMPLE.COM');
     expect('non-admin cannot add an admin', q'[begin xxcti_uar_security_pkg.add_admin('someone@example.com'); end;]', 20050);
+
+    ----------------------------------------------------------------------------------------
+    out('== 8. Reviewer assignments (fixtures are created and removed by this script)');
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    -- 910001: top-level employee, no manager. 910002: manager (910099) has no Workday row.
+    -- 910003: has responsibilities but is not in Workday at all (left the company).
+    insert into xxcti_uar_workday_employee_mgr values (910001,'Top','Level','top.level@example.com',null,null,null);
+    insert into xxcti_uar_workday_employee_mgr values (910002,'Lost','Report','lost.report2@example.com',910099,'Gone','Manager');
+    insert into xxcti_uar_employee_responsibilities values ('TOP.LEVEL','910001','General Ledger Inquiry','General Ledger',sysdate-100,null);
+    insert into xxcti_uar_employee_responsibilities values ('LOST.REPORT','910002','Payables Manager','Payables',sysdate-100,null);
+    insert into xxcti_uar_employee_responsibilities values ('LEFT.PERSON','910003','Purchasing Buyer','Purchasing',sysdate-100,null);
+    commit;
+    verdict('before: nobody can review 910001 / 910002',
+            q('select count(*) from xxcti_uar_effective_mgr where employee_id in (910001,910002) and manager_id is null') = '2');
+    expect('a person cannot be their own reviewer',      q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 910001); end;]', 20060);
+    expect('the reviewer must exist with an email',      q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 99999999); end;]', 20061);
+    expect('the employee must be known to the data',     q'[begin xxcti_uar_security_pkg.assign_reviewer(88888888, 2002); end;]', 20063);
+    expect('refused when Workday already has a reviewer', q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2001); end;]', 20062);
+    expect('refused: reviewer reports directly to the employee',   q'[begin xxcti_uar_security_pkg.assign_reviewer(1001, 2001); end;]', 20064);
+    expect('refused: reviewer reports indirectly to the employee', q'[begin xxcti_uar_security_pkg.assign_reviewer(1001, 3001); end;]', 20064);
+    expect('both employee and reviewer are required',    q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, null); end;]', 20066);
+
+    as_user('SANDRA.OKONKWO@EXAMPLE.COM');
+    expect('non-admin cannot assign a reviewer',         q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002); end;]', 20050);
+
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    expect('admin assigns Sandra (2002) to the top-level employee',
+           q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002, 'regression test'); end;]');
+    verdict('...the effective reviewer is now Sandra, source ASSIGNED',
+            q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 910001') = '2002/ASSIGNED');
+    expect('admin assigns a reviewer for the employee whose manager has no Workday row',
+           q'[begin xxcti_uar_security_pkg.assign_reviewer(910002, 2003); end;]');
+    expect('admin assigns a reviewer for an employee who left Workday',
+           q'[begin xxcti_uar_security_pkg.assign_reviewer(910003, 2004, 'left the company'); end;]');
+    verdict('...that employee is visible with the assigned reviewer and no Workday name',
+            q('select manager_id || ''/'' || nvl(employee_legal_first_name, ''-'') from xxcti_uar_effective_mgr where employee_id = 910003') = '2004/-');
+    verdict('none of the three is "unassigned" any more',
+            q('select count(*) from xxcti_uar_effective_mgr where employee_id in (910001,910002,910003) and manager_id is null') = '0');
+    expect('reassigning changes the reviewer (and is logged as a change)',
+           q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2003); end;]');
+    verdict('...the new reviewer is in effect',
+            q('select manager_id from xxcti_uar_effective_mgr where employee_id = 910001') = '2003');
+    verdict('...and the log says CHANGE_REVIEWER',
+            to_number(q('select count(*) from xxcti_uar_admin_log where action = ''CHANGE_REVIEWER'' and performed_date >= to_date(''' || to_char(g_start, 'YYYY-MM-DD HH24:MI:SS') || ''', ''YYYY-MM-DD HH24:MI:SS'')')) >= 1);
+
+    as_user('BRIAN.LINDQVIST@EXAMPLE.COM');   -- 2003, the assigned reviewer of 910001 and 910002
+    verdict('an assigned reviewer may review the employee (can_review = Y)',
+            xxcti_uar_security_pkg.can_review('910001') = 'Y' and xxcti_uar_security_pkg.can_review('910002') = 'Y');
+    verdict('an assigned reviewer may NOT review someone else''s employee',
+            xxcti_uar_security_pkg.can_review('910003') = 'N');
+
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    -- Workday later supplies a manager: the assignment stops being used
+    update xxcti_uar_workday_employee_mgr
+       set manager_id = 2001, manager_first_name = 'Michael', manager_last_name = 'Campbell'
+     where employee_id = 910001;
+    commit;
+    verdict('once Workday has a manager the assignment is ignored (source WORKDAY)',
+            q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 910001') = '2001/WORKDAY');
+    expect('...and a new assignment is refused', q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002); end;]', 20062);
+
+    expect('admin removes an assignment',         q'[begin xxcti_uar_security_pkg.remove_reviewer(910002); end;]');
+    expect('removing it again is rejected',       q'[begin xxcti_uar_security_pkg.remove_reviewer(910002); end;]', 20065);
+    as_user('SANDRA.OKONKWO@EXAMPLE.COM');
+    expect('non-admin cannot remove an assignment', q'[begin xxcti_uar_security_pkg.remove_reviewer(910003); end;]', 20050);
+
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    verdict('assignments were logged (assign/remove)',
+            to_number(q('select count(*) from xxcti_uar_admin_log where action in (''ASSIGN_REVIEWER'',''REMOVE_REVIEWER'') and performed_date >= to_date(''' || to_char(g_start, 'YYYY-MM-DD HH24:MI:SS') || ''', ''YYYY-MM-DD HH24:MI:SS'')')) >= 4);
+
+    -- end-dated rows are reported (rolled back)
+    update xxcti_uar_employee_responsibilities set end_date = trunc(sysdate) - 30 where employee_number = '910003';
+    verdict('an already end-dated responsibility is reported in xxcti_uar_data_issues',
+            to_number(q('select count(*) from xxcti_uar_data_issues where issue like ''Responsibility already end-dated%'' and ref = ''910003''')) = 1);
+    rollback;
+
+    -- fixtures out
+    no_session;
+    delete from xxcti_uar_reviewer_overrides where employee_id in (910001, 910002, 910003);
+    delete from xxcti_uar_employee_responsibilities where employee_number in ('910001', '910002', '910003');
+    delete from xxcti_uar_workday_employee_mgr where employee_id in (910001, 910002);
+    commit;
 
     ----------------------------------------------------------------------------------------
     -- cleanup: cycle B is closed, which the package (rightly) will not delete

@@ -1427,8 +1427,48 @@ longer wrap; contrast fixes (TEST badge, amber due-date text, "Locked").
 **Found and fixed along the way:** the `COMMENT ON ... 'a' || 'b'` statements in
 `01_uar_schema_ddl.sql` were invalid and never created the table comments.
 
-**Deliberately not changed (needs a decision):** employees at the top of the Workday
-hierarchy have no manager, so nobody can review their access (now flagged on Page 3);
-whether admins may submit on a manager's behalf; end-dated responsibilities are still
-included in a cycle's snapshot; the app has no session idle/length limits set; the SSO
-credential is named for PMO Hub and each environment needs its own secret after import.
+**Decisions on the items first left open** (resolved the same day, see the next section):
+admin submit-on-behalf stays allowed and logged; end-dated responsibilities get a warning only;
+a 30-minute idle timeout is set; the SSO credential name is left as is for now.
+
+## Release hardening, round 2 — 2026-10-21 (same branch)
+
+**Employees nobody can review — now solvable, not just flagged.** New admin-only Page 5
+"Reviewer Assignments": a report of employees with access but no usable reviewer (top of the
+hierarchy, manager missing from Workday, or the employee is not in Workday at all), a form to
+assign a reviewer, the current assignments, and removal. Workday stays the source of truth: an
+assignment is only accepted when Workday gives no usable manager, and is ignored automatically
+once it does. Rules enforced in `xxcti_uar_security_pkg.assign_reviewer`: admin only; not the
+employee themselves; the reviewer must be an employee with an email so they can sign in; the
+reviewer must not report (directly or indirectly) to the employee, so the review is
+independent. Every assign/change/remove is logged. An assigned reviewer sees the employee under
+My Team Review, in the open cycle too (if they already submitted, the success message says to
+reopen their submission). New objects: `xxcti_uar_reviewer_overrides`,
+`xxcti_uar_effective_mgr` (the single answer to "who reviews employee X": Workday manager, else
+assignment, else nobody; one row per employee, conflicting managers = nobody),
+`xxcti_uar_unassigned_employees`. `can_review`, `can_edit_item`, `submit_review`, the progress
+view, Page 1 and Page 4 all read the effective reviewer. `can_edit_item` now fails closed when
+there is no reviewer at all. Page 4 now lists every review item, including those for employees
+missing from Workday (it used to drop them).
+
+**End-dated responsibilities:** a cycle still includes every row of the responsibilities table
+whatever its `end_date`. If the feed never supplies end dates nothing changes. As a safety net,
+`xxcti_uar_data_issues` (shown on Page 3) now reports any responsibility whose end date is
+already past.
+
+**Session timeout:** 30 minutes idle (`p_max_session_idle_sec=>1800`); no maximum session length.
+
+**Visual polish:** one date format everywhere (`DD-Mon-YYYY`, set as the application date
+format, so date pickers, reports and banners agree; Page 2 "Last Used" is now a real date
+column); status badges for Approved/Denied/Pending, Review Complete, Submitted, cycle Status,
+assignment status and the Page 4 decision (text plus a symbol, so colour is not the only cue);
+"% Complete" shown as a bar with the number; "Manager Completion" now has a heading; Page 1
+progress bar has progressbar semantics.
+
+**Tests:** `07_uar_regression_tests.sql` is now 83 checks (new section 8: assignment rules,
+independence, reassignment, Workday taking over, removal, end-dated reporting). Sandbox seed
+gains employee 1002 (a second top-level person) and no longer generates end dates.
+
+**Still open:** the SSO credential is named for PMO Hub and each environment needs its own secret
+after import (deliberately deferred); the sandbox screenshots show a faint bar beside dropdowns
+that may be a rendering artifact of the offline screenshot method - check in a real browser.
