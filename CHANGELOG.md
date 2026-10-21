@@ -1116,3 +1116,273 @@ SQL Scripts).
 
 Added "(or double-click in the Approval cell)" after the Edit-button instruction, per user
 request.
+
+## P2 approval UX: Approve/Deny buttons replace the editable grid (2026-10-13)
+
+First attempt at a friendlier approval UX was a `NATIVE_YES_NO` ("Switch") column on the
+existing Interactive Grid, in place of the select-list dropdown. Built and tested on branch
+`feature/approval-switch` (commit `e428287`) — rejected by the user: the switch only
+rendered its real widget once a cell was clicked/focused, and the collapsed/unfocused cell
+showed generic "On"/"Off" text instead of the custom `Approved`/`Denied` labels. Reverted
+(`git branch -D feature/approval-switch`) without merging; no functional change from that
+attempt survives on master.
+
+Replaced instead with the design the user proposed directly: a static-looking report with
+one-click "Approve" and "Deny" buttons per row, where Deny opens a page requiring a mandatory
+comment before it saves. The Interactive Grid on P2 (`P2_RESPONSIBILITY`, plug id
+`9700000000000320`) is now a classic/static `create_report_region` (`NATIVE_SQL_REPORT`)
+instead — same plug id, so `P2_BACK_BUTTON`'s existing reference needed no change. The old
+`NATIVE_IG_DML` save process (id `9700000000000370`) is removed; there's no longer a grid to
+save, since each action commits immediately.
+
+Row-level HTML (the Approve button, the Deny link, and a "Locked" span for items the manager
+can no longer edit) renders via `p_plug_query_strip_html=>'N'` on the region — already
+precedented 3x elsewhere in this exact file (`P1_PROGRESS`, `P3_CYCLES`, `P7_ADMINS`), this
+is the classic-report region attribute ("Strip HTML") that turns off escaping so a column's
+raw `<button>`/`<a>` text renders instead of showing as literal text. Confirmed before
+building: whether this mechanism actually works was *not* guessed — PMO Hub's own precedent
+for row-level buttons/cards is `htp.p()` output in a `NATIVE_PLSQL` region, a different
+(heavier) mechanism used there because PMO's cards need custom grouping/layout beyond a
+plain tabular report; it doesn't indicate strip-HTML doesn't work for a simple per-row button,
+and this file's own three existing uses of the attribute confirm it's the established
+in-repo pattern.
+
+Approve is instant: a small `NATIVE_PLSQL` script region emits
+`uarApproveItem(id)` (`apex.item('P2_ACTION_ITEM_ID').setValue(id); apex.submit('APPROVE_ITEM')`)
+— the same `apex.item().setValue()` + `apex.submit()` shape already used by this app's
+confirm-dialog DA buttons — and a new `AFTER_SUBMIT` process updates the row and commits.
+
+Deny navigates to a new **Page 8 "Deny Item"**, since grepping PMO Hub's entire export for
+`DIALOG_CLOSED`/"Dialog Closed" turned up zero matches — PMO's own "modal" forms are full
+page redirects, not true AJAX dialogs, so Page 8 is built the same way: a real page, gated on
+load by the same `can_review` + `can_edit_item` checks P2 itself uses, with a required
+`P8_COMMENTS` textarea, a `CONFIRM_DENY` process that updates the row (`comment` +
+`'Denied'`), commits, and redirects back to P2 with the employee/cycle context carried via
+`apex_page.get_url`, and a `CANCEL` button that redirects back the same way without saving.
+Considered and dropped PMO's drawer-style slide-in panel template
+(`p_step_template`/`js-dialog-class-t-Drawer--pullOutEnd`) — that specific template id has no
+precedent anywhere in this file (only one page here sets `p_step_template` at all, to a
+different value), and hand-copying a template id between apps is the exact
+`p_required_patch`-style mistake this project has been burned by before. Page 8 instead uses
+this app's own default page template, same as every other page here.
+
+Caught and fixed during mechanical review before commit (not during a live import attempt):
+the new report region had copied `p_template` and `p_region_template_options` values from
+P1's Interactive-Report-based employee list instead of from this file's own classic-report
+precedent — fixed to match `P1_PROGRESS`/`P3_CYCLES`/`P7_ADMINS` exactly
+(`p_template=>4072358936313175081`, `p_region_template_options=>'#DEFAULT#'`).
+
+Known scope gap, not yet addressed: a comment can now only be added via the Deny flow —
+there's no path to attach an optional comment to an already-Approved item, unlike the old
+dropdown design. Flagged for the user as a possible follow-up, not fixed here.
+
+Untested — needs a real import and manual test of: Approve (instant, no page change), Deny
+(Page 8 loads, requires a comment, saves, redirects back to P2), Locked display (cycle closed
+or manager already submitted shows "Locked" instead of buttons), and that `P2_BACK_BUTTON`
+still renders correctly now that its parent region changed type.
+
+**Correction (2026-10-13):** tested and the Approve/Deny markup rendered as literal escaped
+text (`&lt;button...`), not real buttons. `p_plug_query_strip_html=>'N'` turned out not to be
+the right mechanism — it's a `create_report_region` (classic report) attribute, and classic
+reports have no per-column way to disable escaping at all (confirmed by checking
+`create_report_columns`'s real parameter list in the original app 104 export and a fresh Page
+Designer test export — no escape-control parameter exists there). The actual in-repo
+precedent for raw per-row HTML is `p_column_html_expression` on `create_worksheet_column`,
+which only exists on Interactive Report regions (`p_plug_source_type=>'NATIVE_IR'`) — already
+proven working in this exact app on `P1_EMPLOYEES`'s employee-link column. Rebuilt
+`P2_RESPONSIBILITY` as an IR on that same pattern: the SQL is unchanged, the `ACTIONS`
+column's own `html_expression` is `'#ACTIONS#'` (a column referencing its own placeholder
+bypasses the default escaping, same technique `P1_EMPLOYEES` uses with
+`EMPLOYEE_URL`/`EMPLOYEE_ID`), and `p_show_toolbar=>false` on the new `create_worksheet` call
+keeps the static, toolbar-free look the user asked for. Added the `create_worksheet_rpt`
+default-report declaration this requires — a previously logged gotcha (new IR columns
+silently don't render without one) applies here too. Still untested after this fix.
+
+**Correction (2026-10-13, again):** import failed — `ORA-06550 ... PLS-00306: wrong number or
+types of arguments in call to 'CREATE_WORKSHEET'`. Had added `p_show_toolbar`/
+`p_toolbar_buttons` to the new `create_worksheet` call to hide the IR's toolbar for a static
+look; those two params actually belong to `create_interactive_grid` (confirmed in the
+original app 104 export) and don't exist on `create_worksheet` at all — another case of
+copying a parameter with no precedent on the actual call being made. Removed both;
+`create_worksheet` now matches `P1_EMPLOYEES`'s already-working signature exactly. The
+toolbar will show by default until a real IR-toolbar-hiding mechanism is found and verified —
+not attempted again without precedent this time.
+
+**Correction (2026-10-13, third time):** import succeeded, but the Approve/Deny markup
+still rendered as escaped text. Root cause: `p_column_html_expression` escapes the
+*substituted value*, not the template's own literal text — `P1_EMPLOYEES`'s working example
+(`'<a href="#EMPLOYEE_URL#">#EMPLOYEE_ID#</a>'`) never actually tested this, because
+`EMPLOYEE_URL`/`EMPLOYEE_ID` are a plain URL and a number with no markup in them to escape.
+My `'#ACTIONS#'` column asked APEX to substitute a value that *was itself* the full
+`<button>`/`<a>` markup, computed in SQL — exactly the thing html_expression escapes to
+prevent XSS from dynamic data. There is no way to turn that off.
+
+Fixed by flipping which part is literal and which is substituted: the full button/link HTML
+is now literal text inside the `p_column_html_expression` parameter itself (on the
+`REVIEW_ITEM_ID` column, reusing the same "carrier column" trick `P1_EMPLOYEES` uses), and
+only plain, safe values are substituted into it — `#REVIEW_ITEM_ID#` (a number),
+`#DENY_URL#` (a URL; its `&` query separators become `&amp;` when escaped, which is the
+*correct* encoding inside an `href` attribute anyway, not a bug), and `#LOCKED_DISPLAY#`/
+`#UNLOCKED_DISPLAY#` (plain words `'inline'`/`'none'` driving a CSS `display:` toggle instead
+of trying to conditionally swap HTML — plain alphanumeric text passes through escaping
+unchanged either way, so this sidesteps the whole problem instead of fighting it). Three new
+hidden (`HIDDEN_ESCAPE_SC`) helper columns carry `DENY_URL`/`LOCKED_DISPLAY`/
+`UNLOCKED_DISPLAY`; the SQL source now returns only plain values, no HTML. Still untested
+after this fix.
+
+**Follow-up fixes after live testing (2026-10-13):** markup now rendered correctly; four
+issues reported from the live page:
+- Clicking Approve threw "Session state protection violation" on `P2_ACTION_ITEM_ID`.
+  Removed `value_protected=>'Y'` from that item — it's intentionally overwritten by
+  `uarApproveItem()`'s own JS before submit, and session state protection exists to catch
+  exactly that kind of client-side change, so the two are fundamentally incompatible for an
+  item used this way.
+- Approve/Deny colors: `t-Button--hot`/`t-Button--warning` replaced with the standard
+  Universal Theme semantic classes `t-Button--success` (green) and `t-Button--danger` (red,
+  already precedented in PMO Hub's own "Remove" button).
+- Button column too wide: changed the carrier column (`REVIEW_ITEM_ID`) from
+  `NUMBER`/`RIGHT`-aligned to plain `STRING` with no alignment override, and added
+  `white-space:nowrap` to the html_expression's own wrapper spans, so the column shrinks to
+  its actual content width instead of reserving numeric-column space.
+- P8 fields stretching to full page width: added a small `NATIVE_PLSQL` region emitting a
+  `<style>` block that caps `#P8_RESPONSIBILITY_DISPLAY`/`#P8_APPLICATION_DISPLAY`/
+  `#P8_COMMENTS` at `max-width:50ch` — using the page item's own name as its DOM id, which is
+  always true in APEX, rather than guessing another internal sizing parameter after getting
+  burned twice already in this same feature by parameters that didn't exist on the call
+  being made.
+
+Still untested after these four fixes.
+
+**Follow-up (2026-10-13, continued):** two of the four weren't actually fixed.
+- Session state protection still fired on Approve. Every `value_protected` usage in both this
+  app's and PMO Hub's export files sets it explicitly to `'Y'` or `'N'` — none omit the
+  attribute. Dropping it entirely (the previous fix) apparently doesn't reliably default to
+  unprotected. Set it explicitly to `'N'` on `P2_ACTION_ITEM_ID` instead of omitting it.
+- P8's `max-width:50ch` on the three individual fields didn't shrink the page — the fields'
+  *containers* were still full-width, and the region holding the Confirm Deny button isn't
+  tied to any one item's CSS at all. Replaced the per-field rule with
+  `.t-Region:has(#P8_COMMENTS){max-width:50ch;}` — `.t-Region` is Universal Theme's standard,
+  stable region wrapper class, and `:has()` lets the single known item id (`#P8_COMMENTS`,
+  reliable since an item's name is always its DOM id in APEX) select its *ancestor* region
+  without needing to guess a region-level id or any new PL/SQL parameter. Narrowing the
+  region narrows everything inside it, fields and buttons alike, in one rule.
+
+Still untested after this round.
+
+## P2: clear stale denial comment on re-approval, update instructions (2026-10-13)
+
+If an item was Denied (with a comment) and the manager then clicks Approve on it, the
+"Approve Item" process now also sets `comments = null` — otherwise the old denial rationale
+would stick around on an approved item, which reads as leftover/contradictory. Allowed by
+the `xxcti_uar_review_items_auth` trigger's comment rule, which only requires a non-null
+comment when `approval = 'Denied'`.
+
+Also rewrote `P2_INSTRUCTIONS` to describe the current button-based flow (Approve/Deny per
+row, Deny opening a form requiring a comment) — the old text still referenced the removed
+Interactive Grid's "Click Edit" / "double-click in the Approval cell" workflow and the
+select-list dropdown, both gone since this feature replaced them.
+
+## P1: due-date label and a graphical progress bar (2026-10-13)
+
+"Current review cycle due:" renamed to "Complete Review By:" per user request.
+
+Replaced `P1_PROGRESS`'s three-column classic report (Total Items / Completed / % Complete)
+with a single red-to-green progress bar. Given the escaping problems worked through earlier
+today on P2, this was built directly as a `NATIVE_PLSQL` region using `htp.p()` output (the
+same, already-proven technique as `P1_INSTRUCTIONS`/`P1_CYCLE_DUE_INFO` on this same page),
+not another report-region HTML-escaping workaround. The bar's fill color is computed as
+`hsl(pct_complete * 1.2, 70%, 45%)` — a continuous hue sweep from red (0%) to green (100%)
+rather than discrete buckets, since the user asked for color that changes "as progress
+increases." Kept the same plug id (`9700000000000270`) since `P1_CAN_SUBMIT` and the
+`SUBMIT_REVIEW` button are both parented to this region and needed no changes themselves.
+
+## P2: show which employee is being reviewed, instructions point back to P1 (2026-10-13)
+
+P2 had no on-page indication of which employee's access was being reviewed — just a
+generic "Employee Review" title and a hidden `P2_EMPLOYEE_ID`. Added `P2_EMPLOYEE_NAME`
+(hidden, populated in the existing `BEFORE_HEADER` ownership-check process via a lookup
+against `xxcti_uar_workday_employee_mgr` keyed on `P2_EMPLOYEE_ID`, with a fallback to the
+raw id if the lookup finds nothing) and a "Reviewing: **Name**" line at the top of
+`P2_INSTRUCTIONS`, escaped via `apex_escape.html` the same way `P1_GREETING` already escapes
+the logged-in user's name.
+
+Also added a closing line to `P2_INSTRUCTIONS` telling the manager to click **Back to My
+Team** (the existing button's actual label) to continue reviewing other employees and submit
+once every item is complete — per user request, since the instructions previously only
+covered this one employee's page and never said where to go next.
+
+## P2: employee name as the page header, preserve scroll position (2026-10-13)
+
+The "Reviewing: Name" line added earlier got lost inside the instructions banner, easy to
+miss. Moved it to where it's actually prominent: the Hero region's own title, which was a
+static "Employee Review" — now `'&P2_EMPLOYEE_NAME.''s Access Review'`, using APEX's
+standard substitution-string syntax in a region title (a basic, long-standing APEX feature,
+not an internal import-API parameter, so this doesn't carry the same risk as the guesses
+that broke earlier imports this session). `P2_EMPLOYEE_NAME` is already populated by the
+page's `BEFORE_HEADER` process, which runs before the title renders, so the value is set in
+time. Removed the now-redundant line from `P2_INSTRUCTIONS`.
+
+Also fixed: clicking Approve or Deny on a long list scrolled back to the top every time,
+forcing the manager to re-find their place. Both actions cause a full page
+reload/navigation (Approve submits the page; Deny navigates to Page 8 and back), which
+resets scroll natively — there's no AJAX-partial-refresh precedent anywhere in this app to
+reach for instead. Fixed client-side only, no new PL/SQL API surface: `uarSaveScrollPos()`
+stores `window.scrollY` in `sessionStorage` before the action fires (added to both
+`uarApproveItem()` and the Deny link's `onclick`), and a `window.addEventListener("load", ...)`
+in the same script restores and clears it on the next page load. Known minor edge case: since
+`sessionStorage` isn't scoped per employee, a stale position could in theory carry over if a
+manager leaves mid-review and returns to a *different* employee's page before ever reaching a
+fresh load without a pending saved position — considered minor enough not to engineer around
+unless it turns out to be noticeable in practice.
+
+## P2: Undo back to Pending, column reorder, Comments renamed (2026-10-16)
+
+There was no way to recover from an accidental Approve/Deny click short of denying-then-
+re-approving (which works but is roundabout, and re-approving clears the comment, so an
+accidental Approve followed by "fixing" it that way would silently lose a real denial
+reason if one had existed). Added a third action, **Undo**, visible only once an item has
+a decision (`ri.approval is not null`, via a new `UNDO_DISPLAY` flag alongside the existing
+`LOCKED_DISPLAY`/`UNLOCKED_DISPLAY`) and only while the item is still editable (nested inside
+the same unlocked `<span>`). It submits `RESET_ITEM`, a new `AFTER_SUBMIT` process that sets
+both `approval` and `comments` back to `null` — true Pending, not just a relabeled state —
+and confirms first via a plain JS `confirm()` since this discards whatever reasoning was
+recorded. Styled `t-Button--simple` (precedented in PMO Hub) rather than another semantic
+color, since it's a neutral/undo action, not an approve or deny.
+
+Also reordered the row's columns per user request: the Approve/Deny/Undo column now sits
+between **Approval** and the renamed **Denial Reason** column (previously "Comments"),
+instead of trailing after it. Reusing the existing carrier column (`REVIEW_ITEM_ID`) for the
+reorder, so no new region/column ids were needed for that part — just `p_display_order` and
+the `p_report_columns` list order.
+
+## P2/P8: shrink action column, disable its sort, pre-fill the Deny comment (2026-10-16)
+
+The Approve/Deny/Undo column was still rendering wider than its content, and the user also
+asked to remove sort/filter for that one column specifically. No file I have shows
+`create_worksheet_column` taking a filter/sort-disable or width parameter — the closest
+precedent (`p_enable_filter`/`p_enable_sort_group`/`p_escape_on_http_output`) only ever
+appears on `create_region_column`, the Interactive *Grid* column API, a different call than
+the Interactive *Report* columns this page uses. Rather than guess another unconfirmed
+parameter after three import failures already this feature, fixed both with plain CSS,
+scoped the same way as the P8 width fix: a `uar-actions-cell` marker class added to the
+column's own html_expression content, selected via `.t-Region:has(.uar-actions-cell)
+td/th:nth-child(5)`. Sets `width:1%` (shrinks to content) and, on the header only,
+`pointer-events:none` (removes click-to-sort; the per-column filter UI needs the toolbar,
+already hidden). A wrong CSS selector here just fails to match anything — unlike a wrong
+PL/SQL parameter, it can't break the import.
+
+Separately: editing an already-Denied item's reason showed a blank comment box, since
+Page 8's context-loading query only ever selected `responsibility`/`application`. It now
+also selects the existing `comments` into `P8_COMMENTS`, so reopening Deny on an item that
+already has a reason shows it instead of starting blank.
+
+**Correction (2026-10-16):** the CSS `nth-child(5)` fix for the action column's width/sort
+didn't take. Most likely cause: APEX's Interactive Report render may inject a leading column
+of its own (a row-selector or similar) even with the toolbar hidden, shifting every visible
+column's actual DOM position one or more places from what the declared `p_display_order`
+values would suggest — meaning `nth-child(5)` was quietly targeting the wrong column instead
+of erroring. Replaced the whole CSS approach with JS that finds the real position instead of
+assuming one: it locates the first `.uar-actions-cell` marker in the table, walks up to its
+`<td>`, computes that cell's *actual* child index at runtime, then applies the width/no-sort
+styling to the `<th>`/`<td>`s at that same index. This is self-correcting regardless of any
+extra columns APEX renders that aren't in the declared column list.
