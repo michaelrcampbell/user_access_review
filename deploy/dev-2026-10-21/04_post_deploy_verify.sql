@@ -11,12 +11,12 @@ select object_name, object_type, status from user_objects where status <> 'VALID
 -- 2. Expect: NO ROWS (no compile errors).
 select name, type, line, text from user_errors order by name, type, sequence;
 
--- 3. Expect: 7 rows, all VALID.
+-- 3. Expect: 8 rows, all VALID.
 select object_name, object_type, status
   from user_objects
  where object_name in ('XXCTI_UAR_ADMIN_LOG','XXCTI_UAR_REVIEWER_OVERRIDES','XXCTI_UAR_EFFECTIVE_MGR',
                        'XXCTI_UAR_UNASSIGNED_ITEMS','XXCTI_UAR_UNASSIGNED_EMPLOYEES','XXCTI_UAR_DATA_ISSUES',
-                       'XXCTI_UAR_ERROR_HANDLER')
+                       'XXCTI_UAR_ERROR_HANDLER','XXCTI_UAR_WORKDAY_NORM')
  order by object_name;
 
 -- 4. Expect: the packages, triggers and cycle-rule indexes all present and VALID/ENABLED.

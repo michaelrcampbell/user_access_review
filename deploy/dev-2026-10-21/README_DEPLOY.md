@@ -1,8 +1,20 @@
-# UAR release -> DEV deployment pack (2026-10-21)
+# UAR release -> DEV deployment pack (2026-10-21, build 2 of 2026-10-22)
 
 Oracle User Access Review, application 530, workspace `ct_bsg_apex`, schema `XXUAR`.
 Moves DEV from the previous release (`416c666`, the last merged state) to this one.
 Everything here is a **manual** deployment: three things are run by hand, in order, plus two read-only checks.
+
+> **Build 2 - read this if you already ran the first build's `02_schema_patch.sql` on DEV.**
+> The first build stopped at the effective-reviewer view with `ORA-00932 ... "O"."REVIEWER_ID" is of data type
+> NUMBER, which is incompatible with expected data type CHAR`: in DEV the Workday feed stores `manager_id` as
+> text, and the sandbox it was tested on stored it as a number. Build 2 reads the ids through a small view that
+> works for either, and was re-tested against sandbox copies with a text `manager_id` and with both ids as text
+> (83/83 regression checks each, plus a walk through the real pages).
+> **What to do:** just run this build's `02_schema_patch.sql` again (it is safe to repeat; it creates what the
+> first run could not and recompiles the packages). Until you do, the first run may have left the packages
+> **invalid**, which would make the *current* DEV app error. Then run `04_post_deploy_verify.sql` (checks 1 and 2
+> must be empty). If you would rather undo everything first, `rollback/R1_restore_previous_packages.sql` restores
+> the previous packages.
 
 ## What this release is
 
@@ -52,7 +64,8 @@ Run it as XXUAR (SQL Workshop > SQL Scripts, or SQLcl) and read every result.
 ### Step 2 - schema patch: `02_schema_patch.sql`
 Run as **XXUAR**. It is safe to run more than once (objects that already exist are left alone; views and
 packages are replaced).
-- Part A creates the log table, reviewer-assignment table, views, indexes and constraints.
+- Part A creates the log table, reviewer-assignment table, views (including `xxcti_uar_workday_norm`, which
+  hides whether the Workday ids are text or numbers), indexes and constraints.
 - Part B adds table comments. Part C replaces the packages, triggers and error handler.
 - Expect every statement to succeed. A "compilation errors" message on any package or trigger means stop and
   tell me; `04_post_deploy_verify.sql` checks 1 and 2 must also come back empty.
@@ -70,7 +83,7 @@ this is how previous releases went in). Parsing schema `XXUAR`.
   **SQL Workshop > SQL Scripts** instead: it reports the real error.
 
 ### Step 4 - verify (read-only): `04_post_deploy_verify.sql`
-Run as XXUAR. Each result has an "expect" note above it (no invalid objects, 9 pages including Page 5, idle
+Run as XXUAR. Each result has an "expect" note above it (no invalid objects, 8 new objects, 9 pages including Page 5, idle
 timeout 1800, date format `DD-Mon-YYYY`, existing cycles unchanged compared with pre-flight check 4).
 
 ### Step 5 - test: `05_TEST_CHECKLIST.md`

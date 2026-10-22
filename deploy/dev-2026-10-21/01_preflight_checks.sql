@@ -29,12 +29,20 @@ select n.object_name,
             then 'already installed' else 'not installed yet' end as status
   from (select 'XXCTI_UAR_ADMIN_LOG'            as object_name from dual union all
         select 'XXCTI_UAR_REVIEWER_OVERRIDES'   from dual union all
+        select 'XXCTI_UAR_WORKDAY_NORM'         from dual union all
         select 'XXCTI_UAR_EFFECTIVE_MGR'        from dual union all
         select 'XXCTI_UAR_UNASSIGNED_ITEMS'     from dual union all
         select 'XXCTI_UAR_UNASSIGNED_EMPLOYEES' from dual union all
         select 'XXCTI_UAR_DATA_ISSUES'          from dual union all
         select 'XXCTI_UAR_ERROR_HANDLER'        from dual) n
  order by n.object_name;
+
+-- 3b. How the Workday feed stores its ids in THIS environment. Informational: the release handles either
+--     text or numbers (through the view xxcti_uar_workday_norm).
+select column_name, data_type, data_length
+  from user_tab_columns
+ where table_name = 'XXCTI_UAR_WORKDAY_EMPLOYEE_MGR' and column_name in ('EMPLOYEE_ID','MANAGER_ID')
+ order by column_name;
 
 -- 4. Cycles in DEV right now (the new schema rules apply to these -- see check 5).
 select c.cycle_id, c.cycle_name, c.status, c.period_start, c.period_end, c.due_date,

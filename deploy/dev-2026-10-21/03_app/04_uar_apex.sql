@@ -2758,7 +2758,7 @@ wwv_flow_imp_page.create_page_item(
 '             min(employee_legal_first_name) as first_name,',
 '             min(employee_legal_last_name)  as last_name,',
 '             min(email_address)             as email',
-'      from xxcti_uar_workday_employee_mgr',
+'      from xxcti_uar_workday_norm',
 '      where email_address is not null',
 '      group by employee_id) w',
 'order by 1'))
@@ -2809,7 +2809,7 @@ wwv_flow_imp_page.create_page_process(
 '      xxcti_uar_security_pkg.assign_reviewer(to_number(:P5_EMPLOYEE_ID), to_number(:P5_REVIEWER_ID), :P5_REASON);',
 '      select min(employee_legal_first_name || '' '' || employee_legal_last_name)',
 '        into l_name',
-'        from xxcti_uar_workday_employee_mgr',
+'        from xxcti_uar_workday_norm',
 '       where employee_id = to_number(:P5_REVIEWER_ID);',
 '      if l_cycle is not null then',
 '         l_signed := xxcti_uar_cycle_pkg.manager_signed_off(l_cycle, to_number(:P5_REVIEWER_ID));',
@@ -2850,10 +2850,10 @@ wwv_flow_imp_page.create_report_region(
 '       case when e.manager_source = ''ASSIGNED'' then ''ok'' else ''info'' end as status_class',
 'from xxcti_uar_reviewer_overrides o',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as employee_name',
-'            from xxcti_uar_workday_employee_mgr group by employee_id) w on w.employee_id = o.employee_id',
+'            from xxcti_uar_workday_norm group by employee_id) w on w.employee_id = o.employee_id',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as reviewer_name,',
 '                  min(email_address) as email_address',
-'            from xxcti_uar_workday_employee_mgr group by employee_id) rv on rv.employee_id = o.reviewer_id',
+'            from xxcti_uar_workday_norm group by employee_id) rv on rv.employee_id = o.reviewer_id',
 'left join (select employee_id, max(manager_source) as manager_source',
 '            from xxcti_uar_effective_mgr group by employee_id) e on e.employee_id = o.employee_id',
 'order by o.assigned_date desc, o.employee_id'))
@@ -2976,9 +2976,9 @@ wwv_flow_imp_page.create_page_item(
 '       o.employee_id as r',
 'from xxcti_uar_reviewer_overrides o',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as employee_name',
-'            from xxcti_uar_workday_employee_mgr group by employee_id) w on w.employee_id = o.employee_id',
+'            from xxcti_uar_workday_norm group by employee_id) w on w.employee_id = o.employee_id',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as reviewer_name',
-'            from xxcti_uar_workday_employee_mgr group by employee_id) rv on rv.employee_id = o.reviewer_id',
+'            from xxcti_uar_workday_norm group by employee_id) rv on rv.employee_id = o.reviewer_id',
 'order by 1'))
 ,p_lov_display_null=>'YES'
 ,p_lov_null_text=>'- Select an assignment -'

@@ -1,14 +1,14 @@
 UAR deployment pack
-built from commit : 17839c4 (Fix grey bar on dropdown labels (Pages 3 and 5))
+built from commit : e5e5f47 (Fix first DEV deploy failure: Workday ids are text in DEV)
 previous release  : 416c666 (Merge feature/approval-static-report: P2 Approve/Deny/Undo buttons, P1 progress bar)
 
 SHA-256                                                           file
-50b6e1109ae5067bae7532459fcb83c9deed0ce25cd0303087c0c33c6f384123  01_preflight_checks.sql
-5faa07f7517285c207a8725fb9f56c43ca9b3b5a23fdccb0bb3521d49bedc014  02_schema_patch.sql
-1a4610dd10bc37b9f22916b004e9532c222d8c2df7114b76c6dfc26dd7619df9  04_post_deploy_verify.sql
+f5a3d99a87483dca38b7f5219da17e074dfee80c3cb765c6967a20a4397dfe3a  01_preflight_checks.sql
+4ade1e71e7d5a309b929a0d07e43312b7faee814d32df53648ff8eccedd89b24  02_schema_patch.sql
+df562e2589b172d670e8afd1527df7b71725e7f54cdec6a945814ae8e53a38db  04_post_deploy_verify.sql
 93f4ea593be44c466faa8604fee4436ede397c0c13f3be6f73d9d04cdc604427  05_TEST_CHECKLIST.md
-66f7f8aa26c906230153cc7885fd90a8a77605741a65ca7c1a68713f8224fe37  README_DEPLOY.md
-e90205d7c09f239f5a5eda240c5ab4f8c9eea6dca32400b460ef794f37c35b02  03_app/04_uar_apex.sql
+27339599600e5e27dd804cf8cc2d652f184b9b491741485658f7922aa2120991  README_DEPLOY.md
+c681bc9a261f653b52882cc018b8d4b7880da38123a8abb22e1a1ebf109ed0a2  03_app/04_uar_apex.sql
 29e0292649574e1a8bd96ab9af2cc45fab4f5467f4e47b2b99da4d149bf7a4b4  rollback/R1_restore_previous_packages.sql
 163d69d813392dbfb33b66a1bb91482c6f3dd7c01cdd5fb20135b663f6b1548e  rollback/R2_previous_app_04_uar_apex.sql
 08ce05faee6e93b7db98d225eea42b712b80cddc4dba5c81fb08acd7c6bd9b2b  rollback/R3_optional_remove_new_objects.sql
