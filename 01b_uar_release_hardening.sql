@@ -137,6 +137,21 @@ comment on table xxcti_uar_reviewer_overrides is
 --     manager_source: WORKDAY, ASSIGNED (Page 5), or null = nobody can review.
 --     workday_manager_id keeps the raw Workday value for diagnostics.
 -- ----------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- 3a. The Workday feed's id columns are text in some environments and numbers in others.
+--     Everything new reads the ids through this view, which always gives numbers (a value
+--     that is not a number becomes null instead of failing the query).
+-- ----------------------------------------------------------------------------
+create or replace view xxcti_uar_workday_norm as
+select to_number(trim(employee_id) default null on conversion error) as employee_id,
+       employee_legal_first_name,
+       employee_legal_last_name,
+       email_address,
+       to_number(trim(manager_id) default null on conversion error)  as manager_id,
+       manager_first_name,
+       manager_last_name
+  from xxcti_uar_workday_employee_mgr;
+
 create or replace view xxcti_uar_effective_mgr as
 select e.employee_id,
        e.employee_legal_first_name,
@@ -162,10 +177,11 @@ select e.employee_id,
                     then min(manager_id) end                               as manager_id,
                min(manager_first_name)                                     as manager_first_name,
                min(manager_last_name)                                      as manager_last_name
-          from xxcti_uar_workday_employee_mgr
+          from xxcti_uar_workday_norm
+         where employee_id is not null
          group by employee_id) e
   left join (select employee_id, min(email_address) as email_address
-               from xxcti_uar_workday_employee_mgr
+               from xxcti_uar_workday_norm
               group by employee_id) mw
     on mw.employee_id = e.manager_id
   left join xxcti_uar_reviewer_overrides o
@@ -174,7 +190,7 @@ select e.employee_id,
                     min(employee_legal_first_name) as first_name,
                     min(employee_legal_last_name)  as last_name,
                     min(email_address)             as email_address
-               from xxcti_uar_workday_employee_mgr
+               from xxcti_uar_workday_norm
               group by employee_id) rw
     on rw.employee_id = o.reviewer_id
 union all
@@ -194,10 +210,10 @@ select o.employee_id,
                min(employee_legal_first_name) as first_name,
                min(employee_legal_last_name)  as last_name,
                min(email_address)             as email_address
-          from xxcti_uar_workday_employee_mgr
+          from xxcti_uar_workday_norm
          group by employee_id) rw
     on rw.employee_id = o.reviewer_id
- where not exists (select 1 from xxcti_uar_workday_employee_mgr w
+ where not exists (select 1 from xxcti_uar_workday_norm w
                     where w.employee_id = o.employee_id);
 
 -- ----------------------------------------------------------------------------
@@ -230,7 +246,7 @@ select ri.cycle_id,
        ri.application,
        case
          when e.employee_id        is null then 'Employee not found in Workday data'
-         when exists (select 1 from xxcti_uar_workday_employee_mgr w
+         when exists (select 1 from xxcti_uar_workday_norm w
                        where w.employee_id = e.employee_id
                        group by w.employee_id
                       having count(distinct w.manager_id) > 1)
@@ -259,7 +275,7 @@ select employee_number,
                nvl(trim(e.employee_legal_first_name || ' ' || e.employee_legal_last_name), '(not in Workday data)') as employee_name,
                case
                  when e.employee_id        is null then 'Employee not found in Workday data'
-                 when exists (select 1 from xxcti_uar_workday_employee_mgr w
+                 when exists (select 1 from xxcti_uar_workday_norm w
                                where w.employee_id = e.employee_id
                                group by w.employee_id
                               having count(distinct w.manager_id) > 1)

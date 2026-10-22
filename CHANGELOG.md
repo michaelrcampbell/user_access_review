@@ -1477,3 +1477,18 @@ because the theme's own rule is more specific) so label, strip and dropdown line
 
 **Still open:** the SSO credential is named for PMO Hub and each environment needs its own secret
 after import (deliberately deferred).
+
+## Fix found on the first DEV deployment attempt — 2026-10-22
+
+`01b_uar_release_hardening.sql` failed in DEV at `xxcti_uar_effective_mgr` with
+`ORA-00932 ... "O"."REVIEWER_ID" is of data type NUMBER, which is incompatible with expected data type CHAR`
+(and the three views that read it then failed with ORA-00942). Cause: in DEV the Workday feed's
+`manager_id` is text; the sandbox stand-in table used numbers, so the mismatch never showed. New view
+`xxcti_uar_workday_norm` returns both id columns as numbers whatever the source type (a non-numeric value
+becomes null instead of failing the query). The effective-reviewer view, the two "unassigned" views,
+`assign_reviewer` and Page 5's queries read it; the code that already worked in DEV is unchanged.
+Verified by reproducing the exact error on a sandbox copy with a text `manager_id`, then running the fixed
+scripts, the 83-check regression and a walk of the pages against (a) text `manager_id` and (b) text
+`employee_id` and `manager_id`. Lesson: the sandbox stand-ins should mirror DEV's column types; the pack's
+pre-flight now reports them.
+

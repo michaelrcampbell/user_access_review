@@ -210,7 +210,7 @@ create or replace package body xxcti_uar_security_pkg as
         end if;
 
         select count(*) into l_n
-          from xxcti_uar_workday_employee_mgr
+          from xxcti_uar_workday_norm
          where employee_id = p_reviewer_id and email_address is not null;
         if l_n = 0 then
             raise_application_error(-20061,
@@ -218,7 +218,7 @@ create or replace package body xxcti_uar_security_pkg as
         end if;
 
         select count(*) into l_n from (
-            select 1 from xxcti_uar_workday_employee_mgr where employee_id = p_employee_id
+            select 1 from xxcti_uar_workday_norm where employee_id = p_employee_id
             union all
             select 1 from xxcti_uar_employee_responsibilities where employee_number = to_char(p_employee_id));
         if l_n = 0 then
@@ -237,7 +237,7 @@ create or replace package body xxcti_uar_security_pkg as
         -- independence: the reviewer's own management chain must not contain the employee
         select count(*) into l_n from (
             select employee_id
-              from xxcti_uar_workday_employee_mgr
+              from xxcti_uar_workday_norm
              start with employee_id = p_reviewer_id
            connect by nocycle prior manager_id = employee_id)
          where employee_id = p_employee_id;
@@ -247,9 +247,9 @@ create or replace package body xxcti_uar_security_pkg as
         end if;
 
         select nvl(min(employee_legal_first_name || ' ' || employee_legal_last_name), to_char(p_employee_id))
-          into l_emp from xxcti_uar_workday_employee_mgr where employee_id = p_employee_id;
+          into l_emp from xxcti_uar_workday_norm where employee_id = p_employee_id;
         select min(employee_legal_first_name || ' ' || employee_legal_last_name)
-          into l_rev from xxcti_uar_workday_employee_mgr where employee_id = p_reviewer_id;
+          into l_rev from xxcti_uar_workday_norm where employee_id = p_reviewer_id;
 
         begin
             select reviewer_id into l_old from xxcti_uar_reviewer_overrides where employee_id = p_employee_id;
