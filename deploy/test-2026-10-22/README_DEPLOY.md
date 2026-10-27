@@ -22,7 +22,7 @@ before and after.
 | Schema **XXUAR** exists in the TEST database, is attached to workspace **ct_bsg_apex**, can create tables/views/sequences/procedures/triggers and has storage quota | pre-flight checks 4 and 5. If the schema is missing, a DBA creates it and assigns it to the workspace first. |
 | The **three source feeds** exist in XXUAR with data | pre-flight check 2 (and 8, 9 for what is in them). The install does not create them; without them the views cannot be created. If TEST has no feed yet, stop and ask - do not install around it. |
 | Application id **530** is free in the workspace | pre-flight check 6 |
-| **SSO** for the TEST URL: the Azure app registration lists TEST's callback address (`https://<TEST host>/ords/apex_authentication.callback`) and you have its client secret | Step 4 asks for the secret during import. The credential is called `Creation APEX - DEV - PMO` in the export - that is just its name and is unchanged. |
+| **SSO** for the TEST URL: the Azure app registration lists TEST's callback address (`https://<TEST host>/ords/apex_authentication.callback`) and you have its **Application (client) ID** and a **client secret value** | Step 4. The import creates the web credential **empty** (export files never carry credential values). |
 | The **email you sign in with** (SSO email claim) for the first admin | Step 3 |
 | Who | someone who can run SQL as XXUAR and import applications in `ct_bsg_apex` on TEST |
 | Time | about 20 minutes plus testing |
@@ -50,7 +50,17 @@ you edit it, and is harmless to repeat.) Further admins are added later on the A
 
 ### Step 4 - import the application: `04_app/04_uar_apex.sql`
 App Builder > **Import** > choose the file > install as **application 530**, parsing schema **XXUAR**.
-- When asked for the web credential's **client secret**, enter the secret for the TEST registration.
+- **SSO credential - fill in BOTH fields.** The import creates the web credential `Creation APEX - DEV - PMO`
+  (static id `Creation_APEX_DEV_PMO`) with **no values**, and the "Azure AD SSO" login scheme is bound to it. Open
+  Workspace Utilities > **Web Credentials** > that credential and enter the TEST registration's **Application
+  (client) ID** in *Client ID or Username* and the secret **value** (not the secret ID) in *Client Secret or
+  Password*; Apply Changes. (If the import wizard prompts for them, fill both in there.) The name says DEV/PMO but it
+  is only a label.
+- If you would rather use a TEST-named credential, create it and then select it in Shared Components >
+  Authentication Schemes > **Azure AD SSO** > *Credential Store*. **Creating a credential alone changes nothing**: the
+  scheme keeps using the one it was exported with.
+- Sign-in error **AADSTS900144 "The request body must contain the following parameter: client_id"** means the credential
+  the scheme uses has an empty Client ID, or the scheme points at a different credential from the one you filled in.
 - If App Builder's Import fails with an opaque message (HTTP 400 / ORDS-13002), run the same file through
   **SQL Workshop > SQL Scripts** instead: it reports the real error. (If the workspace id differs from the one
   inside the file, the App Builder import still targets the workspace you are logged in to.)

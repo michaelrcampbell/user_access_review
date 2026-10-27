@@ -1,5 +1,5 @@
 -- ============================================================================
--- UAR : SCHEMA INSTALL, FIRST INSTALL ONLY (built from commit 5d2359d)
+-- UAR : SCHEMA INSTALL, FIRST INSTALL ONLY (built from commit f96c29d)
 --
 -- Run as XXUAR (SQL Workshop > SQL Scripts, or SQLcl) in a schema that has NO UAR objects yet.
 -- It is NOT safe to run twice: the original table/sequence statements refuse to repeat.

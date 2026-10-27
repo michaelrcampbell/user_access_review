@@ -1,13 +1,13 @@
 UAR deployment pack
-built from commit : 5d2359d (make_pack: first-install (FRESH) mode; TEST pack preflight/verify; uninstall tolerates already-removed triggers)
+built from commit : f96c29d (Add TEST first-install deployment pack)
 previous release  : none - FIRST INSTALL
 
 SHA-256                                                           file
 138465ce78f52f878b5af173774834d6e51c6f2bb73fa1adfa94a4e77f497909  01_preflight_checks.sql
-0add781b1bdbed66a36d7b00e137c1d3d288333dbddecf318c190aa9a58757db  02_schema_install.sql
+21755e1e2bb6d03f71be53220bd8422c59e493b9176838d91681a686b3658371  02_schema_install.sql
 c3fc1605083843c482b9610bf06c21f066413803b4845bdc7a53db4c1af262df  03_seed_first_admin.sql
 077bf8b77b8a17ecb729e3258d3f9a3b2daab92691eb03e61b9b7404fde34b26  05_post_deploy_verify.sql
-7c498ddc37e618ca75d4eb7ede5a378865893b171898fb82ff6527d1ce600535  06_TEST_CHECKLIST.md
-9a28e5ee2043bd500de234daac390655da51e7757d1503917057c73fb9b1bc17  README_DEPLOY.md
+2432118ae1e54e9b17f843800b3c7b61fc1d5e13e225a1148fc00ba944ead607  06_TEST_CHECKLIST.md
+1cd67ee9a754ef753403e963b35e18893b310e6f9de6553dc4f981338080e058  README_DEPLOY.md
 c681bc9a261f653b52882cc018b8d4b7880da38123a8abb22e1a1ebf109ed0a2  04_app/04_uar_apex.sql
 f2f22f0e910689c0305b922c25e0458b4235e045cf3ab253076d205af23980d4  rollback/R1_uninstall_everything.sql

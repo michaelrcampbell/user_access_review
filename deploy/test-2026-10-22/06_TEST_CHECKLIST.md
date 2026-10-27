@@ -21,8 +21,10 @@ TEST starts with **no cycles**. You will open the first one in section 3; use a 
       *If there is no badge, that is cosmetic only - it depends on the database name.*
 
 ## 1. Sign-in, access and session
-- [ ] **SSO sign-in** works for ADMIN and MANAGER. *If it fails with a callback/redirect error, the Azure registration
-      is missing TEST's address; if it fails with a credential error, re-enter the client secret under Web Credentials.*
+- [ ] **SSO sign-in** works for ADMIN and MANAGER. *If Microsoft says `AADSTS900144 ... client_id`, the credential
+      the login scheme uses has an empty Client ID (or the scheme points at another credential) - see README Step 4. A
+      redirect/callback error means the Azure registration is missing TEST's address; an invalid-secret error means
+      the secret value is wrong or expired.*
 - [ ] **MANAGER** sees only *My Team Review* in the side menu; **ADMIN** also sees *Review Cycles*, *Audit History*,
       *Reviewer Assignments* and *Admin Users*.
 - [ ] As MANAGER, open an admin page by address (e.g. `.../review-cycles`): you get
