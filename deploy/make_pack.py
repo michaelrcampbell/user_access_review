@@ -3,6 +3,7 @@
 
     python deploy/make_pack.py <pack-folder> <from-ref>     upgrade pack
     python deploy/make_pack.py <pack-folder> FRESH          first-install pack
+    add --prod to either for the production application variant (no developer edit link, feedback off)
 
     pack-folder  e.g. deploy/dev-2026-10-21 (hand-written README/checklist/preflight/verify live there already)
     from-ref     the git ref that is currently live in the target environment (used for the rollback files),
@@ -28,8 +29,10 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-pack = os.path.abspath(sys.argv[1])
-from_ref = sys.argv[2]
+PROD = "--prod" in sys.argv
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+pack = os.path.abspath(_args[0])
+from_ref = _args[1]
 FRESH = from_ref.upper() == "FRESH"
 
 
@@ -47,6 +50,18 @@ def write(rel, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(text.replace("\n", "\r\n") if rel.endswith((".sql", ".md", ".txt")) else text)
+
+
+def app_text():
+    """The application export. With --prod, two production settings are switched (everything else is identical
+    to what DEV and TEST run): the developer 'edit' link is hidden and the end-user feedback feature is off."""
+    text = read("04_uar_apex.sql")
+    if PROD:
+        for old, new in ((",p_flow_status=>'AVAILABLE_W_EDIT_LINK'", ",p_flow_status=>'AVAILABLE'"),
+                         (",p_allow_feedback_yn=>'Y'", ",p_allow_feedback_yn=>'N'")):
+            assert text.count(old) == 1, f"{old} expected exactly once"
+            text = text.replace(old, new)
+    return text
 
 
 head = git("rev-parse", "--short", "HEAD").strip()
@@ -90,7 +105,7 @@ if FRESH:
           "/\n\n"
           "select email_address as admin, added_date from xxcti_uar_admins order by added_date;\n")
 
-    write("04_app/04_uar_apex.sql", read("04_uar_apex.sql"))
+    write("04_app/04_uar_apex.sql", app_text())
 
     order = [("trigger", ["xxcti_uar_review_items_biu", "xxcti_uar_review_items_auth"]),
              ("package", ["xxcti_uar_cycle_pkg", "xxcti_uar_security_pkg"]),
@@ -147,7 +162,7 @@ else:
              + BAR + "-- PART B\n" + BAR + "\n".join(comments) + "\n\n"
              + BAR + "-- PART C\n" + BAR + read("02_uar_packages.sql"))
     write("02_schema_patch.sql", patch)
-    write("03_app/04_uar_apex.sql", read("04_uar_apex.sql"))
+    write("03_app/04_uar_apex.sql", app_text())
 
     old02 = git("show", f"{from_ref}:02_uar_packages.sql").replace("\r\n", "\n")
     old01 = git("show", f"{from_ref}:01_uar_schema_ddl.sql").replace("\r\n", "\n")
@@ -186,6 +201,7 @@ else:
 
 # ----------------------------------------------------------------------------- manifest
 lines = ["UAR deployment pack", f"built from commit : {head} ({git('log', '-1', '--format=%s').strip()})",
+         "application file  : " + ("PRODUCTION variant (availability AVAILABLE, feedback off); otherwise identical to DEV/TEST" if PROD else "standard (as DEV/TEST)"),
          "previous release  : " + ("none - FIRST INSTALL" if FRESH else
                                    f"{from_ref} ({git('log', '-1', '--format=%s', from_ref).strip()})"), "",
          "SHA-256                                                           file"]
@@ -198,4 +214,4 @@ for root, _, files in sorted(os.walk(pack)):
             h = hashlib.sha256(f.read()).hexdigest()
         lines.append(f"{h}  {os.path.relpath(p, pack).replace(os.sep, '/')}")
 write("MANIFEST.txt", "\n".join(lines) + "\n")
-print("pack assembled in", pack, "from commit", head, "(first install)" if FRESH else "")
+print("pack assembled in", pack, "from commit", head, "(first install)" if FRESH else "", "(PROD app variant)" if PROD else "")
