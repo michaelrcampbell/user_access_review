@@ -1,0 +1,14 @@
+UAR deployment pack
+built from commit : 05a43d7 (make_pack: --prod option (production application variant: available without edit links, feedback off))
+application file  : PRODUCTION variant (availability AVAILABLE, feedback off); otherwise identical to DEV/TEST
+previous release  : none - FIRST INSTALL
+
+SHA-256                                                           file
+068bf9f23befe64a59100bf8fbea4a8ded407646b64497151892f7c83017a0b7  01_preflight_checks.sql
+b1cc5c62f36aa8ea721f79c7b88a1398dacfaa35a69b28512bf7640a2260bc31  02_schema_install.sql
+c3fc1605083843c482b9610bf06c21f066413803b4845bdc7a53db4c1af262df  03_seed_first_admin.sql
+e5838ca71b86832889aeeae3973e626551a4c5f3d9770723e9ac3df0435c7daf  05_post_deploy_verify.sql
+70b5bd390c6a64e7726ed7cb2538bb9487ddfb3e51e7989d68b998c87fa299a6  06_PROD_CHECKLIST.md
+99004f80350cbdfff1a7785a224359dba34dac7d60e1b10f16cda01f37abb961  README_DEPLOY.md
+018b7389ff17413ec3d3d557d77c11bd7e1117a44cf6883c5ef8ff2966af5a61  04_app/04_uar_apex.sql
+f2f22f0e910689c0305b922c25e0458b4235e045cf3ab253076d205af23980d4  rollback/R1_uninstall_everything.sql
