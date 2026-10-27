@@ -1492,3 +1492,13 @@ scripts, the 83-check regression and a walk of the pages against (a) text `manag
 `employee_id` and `manager_id`. Lesson: the sandbox stand-ins should mirror DEV's column types; the pack's
 pre-flight now reports them.
 
+## Rollout — DEV 2026-10-22, TEST and PROD 2026-10-27
+
+The release-hardening work (control fixes, Reviewer Assignments, 30-minute idle timeout, one date format, badges)
+went live in three environments from the same code: DEV `dev-2026-10-22` (commit `e5e5f47`, upgrade from `416c666`),
+TEST `test-2026-10-27` (`91e8fad`, first install) and PROD `prod-2026-10-27` (`05a43d7`, first install; production
+application variant). Deployment packs are in `deploy/`. Things learned on the way: DEV's Workday `MANAGER_ID` is text
+(fixed with `xxcti_uar_workday_norm`); the import creates the SSO web credential empty, so both Client ID and secret
+must be entered (AADSTS900144 otherwise); a dropdown's floating label strip must be contained by narrowing the whole
+field. `README.md` was rewritten to describe the live system (it still described a Stage 0 build).
+

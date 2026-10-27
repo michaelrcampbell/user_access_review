@@ -1,3 +1,8 @@
+> **Historical document.** This was the original page-by-page spec for building the app in Page Designer. The
+> application has since been built (`04_uar_apex.sql`) and is live in DEV, TEST and PROD, and it differs from this
+> spec in many places (for example Page 1 is an Interactive Report, there is a Reviewer Assignments page, sign-off and
+> the audit views were added). Treat it as background only; `README.md` and `CHANGELOG.md` describe the real app.
+
 # UAR App Rebuild — APEX Build Guide
 
 Build this in Page Designer rather than hand-editing export SQL. The schema and packages
