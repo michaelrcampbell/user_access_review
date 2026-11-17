@@ -26,8 +26,8 @@ settings (availability "Available" without developer edit links, end-user feedba
    cycle is the permanent audit record.
 4. **Audit History** shows every item with who decided what and when, any decision that was later changed, and an
    **Admin Activity** log of what admins did.
-5. Employees nobody can review (top of the hierarchy, manager missing from Workday, or not in Workday at all) get an
-   admin-assigned reviewer on **Reviewer Assignments**.
+5. On **Reviewer Assignments** an admin gives a reviewer to employees nobody can review (top of the hierarchy, manager
+   missing from Workday, or not in Workday at all), and can **move an employee to another manager's team**.
 
 ## What the system enforces
 - Real authorization (`xxcti_uar_security_pkg`): a manager can only review their own reports; **nobody can approve
@@ -41,8 +41,9 @@ settings (availability "Available" without developer edit links, end-user feedba
   `xxcti_uar_review_items_history`.
 - Admin actions (open/close/delete cycle, reopen, submit on behalf, add/remove admin, assign/remove reviewer) are logged
   in `xxcti_uar_admin_log`.
-- A reviewer assignment is only accepted when Workday gives no usable manager, the reviewer does not report to the
-  employee, and it stops being used as soon as Workday supplies a manager.
+- A reviewer assignment wins over Workday until it is removed (removing it returns the employee to their Workday
+  manager). Moving an employee away from a Workday manager needs a reason; the new reviewer cannot report to the employee
+  and cannot be someone the employee already reviews; decisions already recorded are kept.
 - 30-minute idle session timeout; SSO sign-in (Azure AD / OpenID Connect).
 
 ## Pages
@@ -53,7 +54,7 @@ settings (availability "Available" without developer edit links, end-user feedba
 | 8 Deny Item | the employee's reviewer | the denial reason form |
 | 3 Review Cycles | admins | open / close / delete cycle, reopen a submission, manager completion, data-quality warnings |
 | 4 Audit History | admins | all items, decision changes, admin activity |
-| 5 Reviewer Assignments | admins | employees with no reviewer, assign / remove |
+| 5 Reviewer Assignments | admins | employees with no reviewer; move an employee to another reviewer; assign / remove |
 | 7 Admin Users | admins | add / remove admins |
 | 9999 Login, 0 Global | | sign-in; shared styles, nav hiding, environment badge |
 

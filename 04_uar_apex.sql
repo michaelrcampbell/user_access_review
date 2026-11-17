@@ -2641,10 +2641,11 @@ wwv_flow_imp_page.create_page_plug(
 ,p_plug_source_type=>'NATIVE_PLSQL'
 ,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
-'htp.p(''<strong>Workday decides who reviews whom.</strong> Use this page only for employees Workday gives no usable reviewer: '');',
-'htp.p(''people at the top of the hierarchy, people whose manager is missing from the data, and people who have left Workday but still have access. '');',
-'htp.p(''An assigned reviewer sees these employees under My Team Review, including in the open cycle. '');',
-'htp.p(''The reviewer cannot report to the employee, and an assignment stops being used as soon as Workday supplies a manager.'');',
+'htp.p(''<strong>Workday decides who reviews whom, unless you override it here.</strong> You can do two things on this page. '');',
+'htp.p(''<strong>Give a reviewer to an employee nobody can review</strong> (people at the top of the hierarchy, whose manager is missing from the data, or who have left Workday but still have access). '');',
+'htp.p(''<strong>Move an employee to another manager''''s team</strong> for this review: click the employee''''s number in the list, then choose the new reviewer and give a reason. '');',
+'htp.p(''An assignment applies at once, including in the open cycle, and wins over Workday until you remove it (removing it returns the employee to their Workday manager). '');',
+'htp.p(''Decisions already recorded are kept. The new reviewer cannot report to the employee.'');',
 'htp.p(''</div>'');'))
 );
 wwv_flow_imp_page.create_report_region(
@@ -2722,7 +2723,7 @@ wwv_flow_imp_page.create_report_columns(
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000001420)
 ,p_plug_name=>'P5_ASSIGN'
-,p_title=>'Assign a Reviewer'
+,p_title=>'Assign a Reviewer (employees with none)'
 ,p_icon_css_classes=>'fa-lg fa-user-plus'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_plug_template=>4072358936313175081
@@ -2828,6 +2829,299 @@ wwv_flow_imp_page.create_page_process(
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_internal_uid=>1700000000001425
 );
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001450)
+,p_plug_name=>'P5_FIND'
+,p_title=>'Move an Employee to Another Reviewer'
+,p_icon_css_classes=>'fa-lg fa-exchange'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>25
+,p_query_type=>'SQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select employee_number,',
+'       employee_name,',
+'       oracle_user,',
+'       responsibilities,',
+'       nvl(reviewer_name, ''(no reviewer)'') as reviewer_name,',
+'       case reviewer_source when ''ASSIGNED'' then ''Assigned (overrides Workday)''',
+'                            when ''WORKDAY''  then ''Workday''',
+'                            else ''None'' end as reviewed_by_source,',
+'       workday_manager,',
+'       apex_page.get_url(',
+'          p_page => 5,',
+'          p_items => ''P5_MOVE_EMPLOYEE_ID'',',
+'          p_values => employee_number,',
+'          p_clear_cache => ''5''',
+'       ) as move_url',
+'from xxcti_uar_employee_reviewers',
+'order by employee_name, employee_number'))
+,p_plug_source_type=>'NATIVE_IR'
+);
+wwv_flow_imp_page.create_worksheet(
+ p_id=>wwv_flow_imp.id(9700000000001451)
+,p_max_row_count=>'500'
+,p_pagination_type=>'ROWS_X_TO_Y'
+,p_pagination_display_pos=>'BOTTOM_RIGHT'
+,p_report_list_mode=>'TABS'
+,p_lazy_loading=>false
+,p_show_detail_link=>'N'
+,p_download_formats=>'CSV:HTML:XLSX'
+,p_enable_mail_download=>'N'
+,p_owner=>'ADMIN'
+,p_internal_uid=>9700000000001451
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001452)
+,p_db_column_name=>'EMPLOYEE_NUMBER'
+,p_display_order=>1
+,p_column_identifier=>'A'
+,p_column_label=>'Employee Number'
+,p_column_html_expression=>'<a href="#MOVE_URL#">#EMPLOYEE_NUMBER#</a>'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001453)
+,p_db_column_name=>'EMPLOYEE_NAME'
+,p_display_order=>2
+,p_column_identifier=>'B'
+,p_column_label=>'Employee'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001454)
+,p_db_column_name=>'ORACLE_USER'
+,p_display_order=>3
+,p_column_identifier=>'C'
+,p_column_label=>'Oracle User'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001455)
+,p_db_column_name=>'RESPONSIBILITIES'
+,p_display_order=>4
+,p_column_identifier=>'D'
+,p_column_label=>'Responsibilities'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001456)
+,p_db_column_name=>'REVIEWER_NAME'
+,p_display_order=>5
+,p_column_identifier=>'E'
+,p_column_label=>'Reviewed By'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001457)
+,p_db_column_name=>'REVIEWED_BY_SOURCE'
+,p_display_order=>6
+,p_column_identifier=>'F'
+,p_column_label=>'Source'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001458)
+,p_db_column_name=>'WORKDAY_MANAGER'
+,p_display_order=>7
+,p_column_identifier=>'G'
+,p_column_label=>'Workday Manager'
+,p_column_type=>'STRING'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_column(
+ p_id=>wwv_flow_imp.id(9700000000001459)
+,p_db_column_name=>'MOVE_URL'
+,p_display_order=>99
+,p_column_identifier=>'H'
+,p_column_label=>'Move Url'
+,p_column_type=>'STRING'
+,p_display_text_as=>'HIDDEN_ESCAPE_SC'
+,p_tz_dependent=>'N'
+,p_use_as_row_header=>'N'
+);
+wwv_flow_imp_page.create_worksheet_rpt(
+ p_id=>wwv_flow_imp.id(9700000000001460)
+,p_application_user=>'APXWS_DEFAULT'
+,p_report_seq=>10
+,p_report_alias=>'uar5rpt'
+,p_status=>'PUBLIC'
+,p_is_default=>'Y'
+,p_report_columns=>'EMPLOYEE_NUMBER:EMPLOYEE_NAME:ORACLE_USER:RESPONSIBILITIES:REVIEWER_NAME:REVIEWED_BY_SOURCE:WORKDAY_MANAGER:MOVE_URL'
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001468)
+,p_plug_name=>'P5_MOVE_SELECTED'
+,p_plug_display_sequence=>26
+,p_plug_source_type=>'NATIVE_PLSQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_name varchar2(400);',
+'   l_cur  varchar2(400);',
+'   l_src  varchar2(40);',
+'   l_wd   varchar2(400);',
+'begin',
+'   if :P5_MOVE_EMPLOYEE_ID is null then',
+'      htp.p(''<div class="uar-instructions" style="background:#F5F8FA;border-left:3px solid #2E75B6;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>No employee selected.</strong> Click an employee number in the list above, then choose the new reviewer below.'');',
+'      htp.p(''</div>'');',
+'   else',
+'      begin',
+'         select employee_name, nvl(reviewer_name, ''nobody''), reviewer_source, workday_manager',
+'           into l_name, l_cur, l_src, l_wd',
+'           from xxcti_uar_employee_reviewers',
+'          where employee_number = :P5_MOVE_EMPLOYEE_ID;',
+'      exception when no_data_found then',
+'         l_name := :P5_MOVE_EMPLOYEE_ID; l_cur := ''nobody''; l_src := ''NONE'';',
+'      end;',
+'      htp.p(''<div class="uar-admin-banner" role="status" style="background:#FFF8E6;border-left:3px solid #B26B00;padding:12px 16px;margin:0 0 16px;border-radius:0 4px 4px 0;">'');',
+'      htp.p(''<strong>Moving '' || apex_escape.html(l_name) || '' ('' || apex_escape.html(:P5_MOVE_EMPLOYEE_ID) || '').</strong> '');',
+'      htp.p(''Now reviewed by '' || apex_escape.html(l_cur) ||',
+'            case l_src when ''ASSIGNED'' then '' (an earlier assignment)'' when ''WORKDAY'' then '' (their Workday manager)'' else '''' end || ''. '');',
+'      if l_wd is not null and l_src = ''ASSIGNED'' then',
+'         htp.p(''Their Workday manager is '' || apex_escape.html(l_wd) || ''. '');',
+'      end if;',
+'      htp.p(''<a href="'' || apex_escape.html_attribute(apex_page.get_url(p_page => 5, p_clear_cache => ''5'')) || ''">Cancel</a>'');',
+'      htp.p(''</div>'');',
+'   end if;',
+'end;'))
+);
+wwv_flow_imp_page.create_page_plug(
+ p_id=>wwv_flow_imp.id(9700000000001462)
+,p_plug_name=>'P5_MOVE'
+,p_title=>'Choose the New Reviewer'
+,p_icon_css_classes=>'fa-lg fa-exchange'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>4072358936313175081
+,p_plug_display_sequence=>27
+,p_location=>null
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001463)
+,p_name=>'P5_MOVE_EMPLOYEE_ID'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001462)
+,p_display_as=>'NATIVE_HIDDEN'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'value_protected', 'Y')).to_clob
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001464)
+,p_name=>'P5_MOVE_REVIEWER_ID'
+,p_item_sequence=>20
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001462)
+,p_prompt=>'New reviewer (manager)'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'select w.last_name || '', '' || w.first_name || '' - '' || w.email as d, w.employee_id as r',
+'from (select employee_id,',
+'             min(employee_legal_first_name) as first_name,',
+'             min(employee_legal_last_name)  as last_name,',
+'             min(email_address)             as email',
+'      from xxcti_uar_workday_norm',
+'      where email_address is not null',
+'      group by employee_id) w',
+'where exists (select 1 from xxcti_uar_workday_norm m where m.manager_id = w.employee_id)',
+'   or exists (select 1 from xxcti_uar_reviewer_overrides o where o.reviewer_id = w.employee_id)',
+'order by 1'))
+,p_lov_display_null=>'YES'
+,p_lov_null_text=>'- Select a reviewer -'
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+);
+wwv_flow_imp_page.create_page_item(
+ p_id=>wwv_flow_imp.id(9700000000001465)
+,p_name=>'P5_MOVE_REASON'
+,p_item_sequence=>30
+,p_item_plug_id=>wwv_flow_imp.id(9700000000001462)
+,p_prompt=>'Reason (required when moving away from a Workday manager)'
+,p_display_as=>'NATIVE_TEXT_FIELD'
+,p_cSize=>40
+,p_cMaxlength=>400
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
+,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
+  'trim_spaces', 'BOTH')).to_clob
+);
+wwv_flow_imp_page.create_page_button(
+ p_id=>wwv_flow_imp.id(9700000000001466)
+,p_button_sequence=>10
+,p_button_plug_id=>wwv_flow_imp.id(9700000000001462)
+,p_button_name=>'MOVE_EMPLOYEE'
+,p_button_action=>'SUBMIT'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>4072362960822175091
+,p_button_is_hot=>'Y'
+,p_button_image_alt=>'Move Employee'
+,p_button_position=>'CREATE'
+);
+wwv_flow_imp_page.create_page_process(
+ p_id=>wwv_flow_imp.id(9700000000001467)
+,p_process_sequence=>15
+,p_process_point=>'AFTER_SUBMIT'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'Move Employee'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'declare',
+'   l_emp     number := to_number(:P5_MOVE_EMPLOYEE_ID);',
+'   l_rev     number := to_number(:P5_MOVE_REVIEWER_ID);',
+'   l_old     varchar2(400);',
+'   l_new     varchar2(400);',
+'   l_cycle   number := xxcti_uar_cycle_pkg.current_open_cycle;',
+'   l_items   number := 0;',
+'   l_decided number := 0;',
+'   l_signed  varchar2(1) := ''N'';',
+'begin',
+'   if :REQUEST = ''MOVE_EMPLOYEE'' then',
+'      if :P5_MOVE_EMPLOYEE_ID is null then',
+'         raise_application_error(-20019, ''Pick an employee first: click their number in the list above.'');',
+'      end if;',
+'      select nvl(max(trim(manager_first_name || '' '' || manager_last_name)), ''nobody'')',
+'        into l_old',
+'        from xxcti_uar_effective_mgr',
+'       where employee_id = l_emp;',
+'      xxcti_uar_security_pkg.assign_reviewer(l_emp, l_rev, :P5_MOVE_REASON);',
+'      select min(employee_legal_first_name || '' '' || employee_legal_last_name)',
+'        into l_new',
+'        from xxcti_uar_workday_norm',
+'       where employee_id = l_rev;',
+'      if l_cycle is not null then',
+'         select count(*), count(approval) into l_items, l_decided',
+'           from xxcti_uar_review_items',
+'          where cycle_id = l_cycle and employee_number = to_char(l_emp);',
+'         l_signed := xxcti_uar_cycle_pkg.manager_signed_off(l_cycle, l_rev);',
+'      end if;',
+'      apex_application.g_print_success_message :=',
+'         ''Moved: '' || l_new || '' now reviews this employee (was '' || l_old || '').'' ||',
+'         case when l_items > 0',
+'              then '' In the open cycle that is '' || l_items || '' item(s), '' || l_decided ||',
+'                   '' already decided; those decisions stay as recorded and '' || l_new || '' can change them.''',
+'         end ||',
+'         case when l_signed = ''Y'' and l_items > 0',
+'              then '' Note: '' || l_new || '' has already submitted their review, so reopen it from Review Cycles for them to review this employee.''',
+'         end;',
+'      :P5_MOVE_EMPLOYEE_ID := null;',
+'      :P5_MOVE_REVIEWER_ID := null;',
+'      :P5_MOVE_REASON      := null;',
+'   end if;',
+'end;'))
+,p_process_clob_language=>'PLSQL'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_internal_uid=>1700000000001467
+);
 wwv_flow_imp_page.create_report_region(
  p_id=>wwv_flow_imp.id(9700000000001430)
 ,p_name=>'P5_ASSIGNMENTS'
@@ -2846,16 +3140,21 @@ wwv_flow_imp_page.create_report_region(
 '       o.reason,',
 '       to_char(o.assigned_date, ''DD-Mon-YYYY'') as assigned_on,',
 '       o.assigned_by,',
-'       case when e.manager_source = ''ASSIGNED'' then ''Active'' else ''Not used - Workday now has a manager'' end as status,',
-'       case when e.manager_source = ''ASSIGNED'' then ''ok'' else ''info'' end as status_class',
+'       case when wm.name is null then ''Active - Workday has no usable manager''',
+'            when e.workday_manager_id = o.reviewer_id then ''Same as Workday - can be removed''',
+'            else ''Active - moved from Workday manager'' end as status,',
+'       case when e.workday_manager_id = o.reviewer_id then ''info'' else ''ok'' end as status_class,',
+'       wm.name as workday_manager',
 'from xxcti_uar_reviewer_overrides o',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as employee_name',
 '            from xxcti_uar_workday_norm group by employee_id) w on w.employee_id = o.employee_id',
 'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as reviewer_name,',
 '                  min(email_address) as email_address',
 '            from xxcti_uar_workday_norm group by employee_id) rv on rv.employee_id = o.reviewer_id',
-'left join (select employee_id, max(manager_source) as manager_source',
+'left join (select employee_id, max(workday_manager_id) as workday_manager_id',
 '            from xxcti_uar_effective_mgr group by employee_id) e on e.employee_id = o.employee_id',
+'left join (select employee_id, min(employee_legal_first_name || '' '' || employee_legal_last_name) as name',
+'            from xxcti_uar_workday_norm group by employee_id) wm on wm.employee_id = e.workday_manager_id',
 'order by o.assigned_date desc, o.employee_id'))
 ,p_ajax_enabled=>'Y'
 ,p_lazy_loading=>false
@@ -2953,6 +3252,15 @@ wwv_flow_imp_page.create_report_columns(
 ,p_display_as=>'HIDDEN'
 ,p_include_in_export=>'N'
 );
+wwv_flow_imp_page.create_report_columns(
+ p_id=>wwv_flow_imp.id(9700000000001469)
+,p_query_column_id=>10
+,p_column_alias=>'WORKDAY_MANAGER'
+,p_column_display_sequence=>10
+,p_column_heading=>'Workday Manager (overridden)'
+,p_heading_alignment=>'LEFT'
+,p_derived_column=>'N'
+);
 wwv_flow_imp_page.create_page_plug(
  p_id=>wwv_flow_imp.id(9700000000001440)
 ,p_plug_name=>'P5_REMOVE'
@@ -3026,7 +3334,7 @@ wwv_flow_imp_page.create_page_process(
 '      raise_application_error(-20019, ''Select an assignment first.'');',
 '   end if;',
 '   xxcti_uar_security_pkg.remove_reviewer(to_number(:P5_REMOVE_EMPLOYEE_ID));',
-'   apex_application.g_print_success_message := ''Assignment removed.'';',
+'   apex_application.g_print_success_message := ''Assignment removed. The employee goes back to their Workday manager (or to no reviewer if Workday has none).'';',
 '   :P5_REMOVE_EMPLOYEE_ID := null;',
 'end if;'))
 ,p_process_clob_language=>'PLSQL'

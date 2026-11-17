@@ -135,7 +135,7 @@ begin
 
     no_session;
     expect('updates outside an APEX session are blocked',
-           q'[update xxcti_uar_review_items set approval='Approved' where rownum=1 and cycle_id=(select cycle_id from xxcti_uar_review_cycles where cycle_name='ZZ Regression A')]', 20021);
+           q'[update xxcti_uar_review_items set approval='Approved' where employee_number='3002' and rownum=1 and cycle_id=(select cycle_id from xxcti_uar_review_cycles where cycle_name='ZZ Regression A')]', 20021);
     rollback;
 
     ----------------------------------------------------------------------------------------
@@ -294,7 +294,8 @@ begin
     expect('a person cannot be their own reviewer',      q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 910001); end;]', 20060);
     expect('the reviewer must exist with an email',      q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 99999999); end;]', 20061);
     expect('the employee must be known to the data',     q'[begin xxcti_uar_security_pkg.assign_reviewer(88888888, 2002); end;]', 20063);
-    expect('refused when Workday already has a reviewer', q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2001); end;]', 20062);
+    expect('refused: that person already reviews the employee (3002 is Sandra''s report)', q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2002); end;]', 20067);
+    expect('moving an employee away from their Workday manager needs a reason', q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2003); end;]', 20068);
     expect('refused: reviewer reports directly to the employee',   q'[begin xxcti_uar_security_pkg.assign_reviewer(1001, 2001); end;]', 20064);
     expect('refused: reviewer reports indirectly to the employee', q'[begin xxcti_uar_security_pkg.assign_reviewer(1001, 3001); end;]', 20064);
     expect('both employee and reviewer are required',    q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, null); end;]', 20066);
@@ -329,14 +330,21 @@ begin
             xxcti_uar_security_pkg.can_review('910003') = 'N');
 
     as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
-    -- Workday later supplies a manager: the assignment stops being used
+    -- Workday later supplies a manager: the assignment is a deliberate decision, so it keeps winning
     update xxcti_uar_workday_employee_mgr
        set manager_id = 2001, manager_first_name = 'Michael', manager_last_name = 'Campbell'
      where employee_id = 910001;
     commit;
-    verdict('once Workday has a manager the assignment is ignored (source WORKDAY)',
+    verdict('an assignment keeps winning after Workday supplies a manager (reviewer 2003, ASSIGNED)',
+            q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 910001') = '2003/ASSIGNED');
+    expect('re-assigning now is a move and needs a reason',  q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002); end;]', 20068);
+    expect('the Workday manager cannot be assigned back (remove the assignment instead)',
+           q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2001, 'x'); end;]', 20069);
+    expect('a move with a reason works',  q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002, 'regression move'); end;]');
+    verdict('...the new reviewer is in effect', q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 910001') = '2002/ASSIGNED');
+    expect('removing the assignment returns the employee to their Workday manager', q'[begin xxcti_uar_security_pkg.remove_reviewer(910001); end;]');
+    verdict('...reviewer is the Workday manager again (2001, WORKDAY)',
             q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 910001') = '2001/WORKDAY');
-    expect('...and a new assignment is refused', q'[begin xxcti_uar_security_pkg.assign_reviewer(910001, 2002); end;]', 20062);
 
     expect('admin removes an assignment',         q'[begin xxcti_uar_security_pkg.remove_reviewer(910002); end;]');
     expect('removing it again is rejected',       q'[begin xxcti_uar_security_pkg.remove_reviewer(910002); end;]', 20065);
@@ -346,6 +354,48 @@ begin
     as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
     verdict('assignments were logged (assign/remove)',
             to_number(q('select count(*) from xxcti_uar_admin_log where action in (''ASSIGN_REVIEWER'',''REMOVE_REVIEWER'') and performed_date >= to_date(''' || to_char(g_start, 'YYYY-MM-DD HH24:MI:SS') || ''', ''YYYY-MM-DD HH24:MI:SS'')')) >= 4);
+
+    ----------------------------------------------------------------------------------------
+    out('== 8b. Moving an employee from one manager''s team to another''s (uses closed cycle B''s items)');
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    declare
+        l_b      number := cyc('ZZ Regression B');
+        l_items  number := to_number(q('select count(*) from xxcti_uar_review_items where cycle_id=' || cyc('ZZ Regression B') || ' and employee_number=''3002'''));
+        l_brian  number := to_number(q('select total_items from xxcti_uar_cycle_progress where cycle_id=' || cyc('ZZ Regression B') || ' and manager_id=2003'));
+        l_sandra number := to_number(q('select total_items from xxcti_uar_cycle_progress where cycle_id=' || cyc('ZZ Regression B') || ' and manager_id=2002'));
+        l_log0   number := to_number(q('select count(*) from xxcti_uar_admin_log where action=''MOVE_REVIEWER'''));
+    begin
+        verdict('before: employee 3002 is reviewed by Sandra (2002) through Workday',
+                q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 3002') = '2002/WORKDAY');
+        expect('refused: the new reviewer reports to the employee (Michael 2001 -> James 3001)',
+               q'[begin xxcti_uar_security_pkg.assign_reviewer(2001, 3001, 'test'); end;]', 20064);
+        expect('admin moves 3002 from Sandra to Brian (2003) with a reason',
+               q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2003, 'moved to Brian in the reorganisation'); end;]');
+        verdict('...the effective reviewer is Brian, source ASSIGNED',
+                q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 3002') = '2003/ASSIGNED');
+        verdict('...logged as MOVE_REVIEWER',
+                to_number(q('select count(*) from xxcti_uar_admin_log where action=''MOVE_REVIEWER''')) = l_log0 + 1);
+        verdict('...Brian''s totals rise by that employee''s items',
+                to_number(q('select total_items from xxcti_uar_cycle_progress where cycle_id=' || l_b || ' and manager_id=2003')) = l_brian + l_items);
+        verdict('...and Sandra''s fall by the same',
+                to_number(q('select total_items from xxcti_uar_cycle_progress where cycle_id=' || l_b || ' and manager_id=2002')) = l_sandra - l_items);
+        expect('refused: a move that would make two people review each other (Brian 2003 -> 3002, whom Brian now reviews)',
+               q'[begin xxcti_uar_security_pkg.assign_reviewer(2003, 3002, 'test'); end;]', 20070);
+        expect('refused: moving them back to the Workday manager (remove the assignment instead)',
+               q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2002, 'test'); end;]', 20069);
+        expect('refused: Brian already reviews them', q'[begin xxcti_uar_security_pkg.assign_reviewer(3002, 2003, 'test'); end;]', 20067);
+    end;
+    as_user('BRIAN.LINDQVIST@EXAMPLE.COM');
+    verdict('Brian may now review 3002', xxcti_uar_security_pkg.can_review('3002') = 'Y');
+    as_user('SANDRA.OKONKWO@EXAMPLE.COM');
+    verdict('Sandra may NOT review 3002 any more', xxcti_uar_security_pkg.can_review('3002') = 'N');
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
+    expect('admin removes the move', q'[begin xxcti_uar_security_pkg.remove_reviewer(3002); end;]');
+    verdict('...3002 is back with Sandra through Workday',
+            q('select manager_id || ''/'' || manager_source from xxcti_uar_effective_mgr where employee_id = 3002') = '2002/WORKDAY');
+    as_user('SANDRA.OKONKWO@EXAMPLE.COM');
+    verdict('...and Sandra may review 3002 again', xxcti_uar_security_pkg.can_review('3002') = 'Y');
+    as_user('MICHAEL.R.CAMPBELL@GMAIL.COM');
 
     -- end-dated rows are reported (rolled back)
     update xxcti_uar_employee_responsibilities set end_date = trunc(sysdate) - 30 where employee_number = '910003';
