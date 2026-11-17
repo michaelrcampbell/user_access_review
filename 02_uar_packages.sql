@@ -52,16 +52,20 @@ create or replace package xxcti_uar_security_pkg as
     procedure add_admin(p_email in varchar2);
     procedure remove_admin(p_email in varchar2);
 
-    -- Reviewer assignments (Page 5): give an employee Workday has no usable
-    -- manager for (none, manager missing, or not in the feed) a reviewer. Admin
-    -- only. Refused when Workday already provides a reviewer, when the reviewer
-    -- is the employee, has no email on file, or reports (directly or
-    -- indirectly) to the employee -- the review must be independent. Logged.
+    -- Reviewer assignments (Page 5). Admin only. Either gives an employee Workday has
+    -- no usable manager for a reviewer, or MOVES an employee away from their Workday
+    -- manager to another reviewer (a reason is then required). The assignment wins
+    -- over Workday until removed. Refused when the reviewer is the employee, already
+    -- reviews them, has no email on file, reports (directly or indirectly) to the
+    -- employee -- the review must be independent -- or, for a move, is reviewed by
+    -- the employee. Logged (MOVE_REVIEWER for a move, otherwise ASSIGN/CHANGE_REVIEWER).
     procedure assign_reviewer(
         p_employee_id in number,
         p_reviewer_id in number,
         p_reason      in varchar2 default null
     );
+    -- Removes an assignment: the employee returns to their Workday manager (or to
+    -- 'no reviewer' if Workday has none). Logged.
     procedure remove_reviewer(p_employee_id in number);
 
 end xxcti_uar_security_pkg;
@@ -195,10 +199,14 @@ create or replace package body xxcti_uar_security_pkg as
         p_reason      in varchar2 default null
     ) is
         l_n      number;
-        l_old    number;
+        l_old    number;                 -- reviewer of an existing assignment, if any
+        l_cur    number;                 -- who reviews the employee right now
+        l_cur_nm varchar2(400);
+        l_wd     number;                 -- the employee's usable Workday manager, if any
         l_reason varchar2(400) := substr(trim(p_reason), 1, 400);
         l_emp    varchar2(400);
         l_rev    varchar2(400);
+        l_action varchar2(40);
     begin
         require_admin;
 
@@ -226,12 +234,30 @@ create or replace package body xxcti_uar_security_pkg as
                 'That employee is not in the Workday data or the responsibilities data.');
         end if;
 
-        select count(*) into l_n
-          from xxcti_uar_effective_mgr
-         where employee_id = p_employee_id and manager_source = 'WORKDAY';
-        if l_n > 0 then
-            raise_application_error(-20062,
-                'Workday already provides a reviewer for this employee, so one cannot be assigned here.');
+        -- who reviews them now, and does Workday have a usable manager for them?
+        begin
+            select e.manager_id,
+                   trim(e.manager_first_name || ' ' || e.manager_last_name),
+                   (select m.employee_id from xxcti_uar_workday_norm m
+                     where m.employee_id = e.workday_manager_id and rownum = 1)
+              into l_cur, l_cur_nm, l_wd
+              from xxcti_uar_effective_mgr e
+             where e.employee_id = p_employee_id;
+        exception
+            when no_data_found then null;
+        end;
+
+        if l_cur is not null and p_reviewer_id = l_cur then
+            raise_application_error(-20067,
+                nvl(l_cur_nm, 'That person') || ' already reviews this employee.');
+        end if;
+        if l_wd is not null and p_reviewer_id = l_wd then
+            raise_application_error(-20069,
+                'That is the employee''s Workday manager. Remove the assignment instead, which returns the employee to them.');
+        end if;
+        if l_wd is not null and l_reason is null then
+            raise_application_error(-20068,
+                'Give a reason for moving an employee away from their Workday manager.');
         end if;
 
         -- independence: the reviewer's own management chain must not contain the employee
@@ -244,6 +270,15 @@ create or replace package body xxcti_uar_security_pkg as
         if l_n > 0 then
             raise_application_error(-20064,
                 'That reviewer reports (directly or indirectly) to this employee, so the review would not be independent.');
+        end if;
+        -- a move must not set up two people reviewing each other's access
+        if l_wd is not null then
+            select count(*) into l_n from xxcti_uar_effective_mgr
+             where employee_id = p_reviewer_id and manager_id = p_employee_id;
+            if l_n > 0 then
+                raise_application_error(-20070,
+                    'That reviewer is reviewed by this employee, so they would be reviewing each other.');
+            end if;
         end if;
 
         select nvl(min(employee_legal_first_name || ' ' || employee_legal_last_name), to_char(p_employee_id))
@@ -259,17 +294,20 @@ create or replace package body xxcti_uar_security_pkg as
                    assigned_by   = coalesce(sys_context('APEX$SESSION','APP_USER'), user),
                    assigned_date = sysdate
              where employee_id = p_employee_id;
-            log_action('CHANGE_REVIEWER', null,
-                l_emp || ' (' || p_employee_id || '): reviewer ' || l_old || ' -> ' || l_rev || ' (' || p_reviewer_id || ')' ||
-                case when l_reason is not null then '. ' || l_reason end);
+            l_action := case when l_wd is not null then 'MOVE_REVIEWER' else 'CHANGE_REVIEWER' end;
         exception
             when no_data_found then
                 insert into xxcti_uar_reviewer_overrides (employee_id, reviewer_id, reason)
                 values (p_employee_id, p_reviewer_id, l_reason);
-                log_action('ASSIGN_REVIEWER', null,
-                    l_emp || ' (' || p_employee_id || ') -> reviewer ' || l_rev || ' (' || p_reviewer_id || ')' ||
-                    case when l_reason is not null then '. ' || l_reason end);
+                l_action := case when l_wd is not null then 'MOVE_REVIEWER' else 'ASSIGN_REVIEWER' end;
         end;
+
+        log_action(l_action, null,
+            l_emp || ' (' || p_employee_id || '): reviewer ' || nvl(l_cur_nm, 'none') ||
+            case when l_cur is not null then ' (' || l_cur || ')' end ||
+            ' -> ' || l_rev || ' (' || p_reviewer_id || ')' ||
+            case when l_wd is not null then '; Workday manager is ' || l_wd end ||
+            case when l_reason is not null then '. ' || l_reason end);
         commit;
     end assign_reviewer;
 

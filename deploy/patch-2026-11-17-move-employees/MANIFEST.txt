@@ -1,0 +1,17 @@
+UAR deployment pack
+built from commit : 31531fe (Allow admins to move an employee to another manager's team (Page 5))
+application file  : both: 04_uar_apex.sql (DEV/TEST) and 04_uar_apex_PROD.sql (PROD: availability AVAILABLE, feedback off)
+previous release  : prod-2026-10-27 (make_pack: --prod option (production application variant: available without edit links, feedback off))
+
+SHA-256                                                           file
+9205e9aee680bebd3f95614432959928962a49d83fb97bfd8f5d2c5b92a31e6e  01_preflight_checks.sql
+8a0458d8a5b18f4047724cd17b3e1750fa087db5be1dce95e2ef541b61dce54f  02_schema_patch.sql
+731f2884412072b379b3151f8f2087358f5053aeabfdadd4ff33a9075f1bde53  04_post_deploy_verify.sql
+4646ed228854c48985f5ac73b965f3ffc8f9a101a2b54dbad1f29320473e1eff  05_TEST_CHECKLIST.md
+636a13a8ae998c64c9d954a35eb3f7085b241f48f701747bc4e2d5336fde7874  README_DEPLOY.md
+10f6cb48b52f5af0d4dfbc9c5542bf1d29b284d623d1f7a5bf69aaedd6ec2850  03_app/04_uar_apex.sql
+8787af98a3309a40014487f1da0b823b123f9351c80ec2d3973fdfc1542024d5  03_app/04_uar_apex_PROD.sql
+61150d43d18d92339654c0568edde899b2199bc964c1a1c6aceeaffb670b0d76  rollback/R1_restore_previous_packages.sql
+f6994f1b2e42a821939fbb8b7ed23829fb26487e1b9045b270255332e3159c9c  rollback/R2_previous_app_04_uar_apex.sql
+05503f8716987ad933b00878a52c28e81f66e0ca240c26d72b2dc966e0b7e7bb  rollback/R2_previous_app_04_uar_apex_PROD.sql
+cefb832ce1063d0571c483090d39f798b34605b47830fd53462d40608e9d2438  rollback/R3_optional_remove_new_objects.sql

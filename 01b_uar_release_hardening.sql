@@ -105,11 +105,12 @@ comment on table xxcti_uar_admin_log is
   'Who did what to cycles and the admin list: open, close, delete, reopen a submission, submit on behalf of a manager, add/remove admin. No FKs on purpose so entries outlive deleted cycles.';
 
 -- ----------------------------------------------------------------------------
--- 3. Reviewer assignments. Workday decides who manages whom. When Workday gives
---    an employee NO usable manager (none on file, the manager has no row of
---    their own, or the employee is not in the feed at all) an admin can assign
---    a reviewer on Page 5. An assignment never overrides a manager Workday
---    knows about, and is ignored automatically once Workday supplies one.
+-- 3. Reviewer assignments. Workday decides who manages whom by default. An admin
+--    can override that on Page 5, for two reasons: the employee has NO usable
+--    manager in Workday (none on file, the manager has no row of their own, or the
+--    employee is not in the feed), or the employee is being MOVED to another
+--    manager's team (a reason is then required). An assignment wins over Workday
+--    until it is removed, which returns the employee to their Workday manager.
 -- ----------------------------------------------------------------------------
 begin
     execute immediate q'~create table xxcti_uar_reviewer_overrides (
@@ -129,12 +130,13 @@ end;
 /
 
 comment on table xxcti_uar_reviewer_overrides is
-  'Admin-assigned reviewer for an employee Workday gives no usable manager (top of the hierarchy, manager missing, or employee not in the feed). Only used while Workday has no manager for the employee.';
+  'Admin-assigned reviewer for an employee: either Workday gives no usable manager (top of the hierarchy, manager missing, employee not in the feed) or the employee is deliberately moved to another manager''s team. Wins over Workday until removed.';
 
 -- ----------------------------------------------------------------------------
 -- 3b. The one place that answers "who reviews employee X?". Everything that
 --     used to read manager_id straight from the Workday table reads this.
---     manager_source: WORKDAY, ASSIGNED (Page 5), or null = nobody can review.
+--     manager_source: ASSIGNED (Page 5 override, wins over Workday), WORKDAY, or
+--     null = nobody can review.
 --     workday_manager_id keeps the raw Workday value for diagnostics.
 -- ----------------------------------------------------------------------------
 -- ----------------------------------------------------------------------------
@@ -156,16 +158,16 @@ create or replace view xxcti_uar_effective_mgr as
 select e.employee_id,
        e.employee_legal_first_name,
        e.employee_legal_last_name,
-       case when mw.employee_id is not null then e.manager_id
-            when rw.employee_id is not null then o.reviewer_id end          as manager_id,
-       case when mw.employee_id is not null then e.manager_first_name
-            when rw.employee_id is not null then rw.first_name end          as manager_first_name,
-       case when mw.employee_id is not null then e.manager_last_name
-            when rw.employee_id is not null then rw.last_name end           as manager_last_name,
-       case when mw.employee_id is not null then mw.email_address
-            when rw.employee_id is not null then rw.email_address end       as manager_email,
-       case when mw.employee_id is not null then 'WORKDAY'
-            when rw.employee_id is not null then 'ASSIGNED' end             as manager_source,
+       case when rw.employee_id is not null then o.reviewer_id
+            when mw.employee_id is not null then e.manager_id end           as manager_id,
+       case when rw.employee_id is not null then rw.first_name
+            when mw.employee_id is not null then e.manager_first_name end   as manager_first_name,
+       case when rw.employee_id is not null then rw.last_name
+            when mw.employee_id is not null then e.manager_last_name end    as manager_last_name,
+       case when rw.employee_id is not null then rw.email_address
+            when mw.employee_id is not null then mw.email_address end       as manager_email,
+       case when rw.employee_id is not null then 'ASSIGNED'
+            when mw.employee_id is not null then 'WORKDAY' end              as manager_source,
        e.manager_id                                                         as workday_manager_id
   -- exactly one row per employee, however many times the feed repeats them. An
   -- employee listed with two DIFFERENT managers has no usable manager (null) and
@@ -288,6 +290,41 @@ select employee_number,
             on to_char(e.employee_id) = er.employee_number
          where e.employee_id is null
             or e.manager_id  is null)
+ group by employee_number;
+
+-- ----------------------------------------------------------------------------
+-- 5c. Every employee in the responsibilities data with who reviews them now, where that
+--     comes from, and who their Workday manager is. Page 5 lists this so an admin can move
+--     an employee to another manager's team.
+-- ----------------------------------------------------------------------------
+create or replace view xxcti_uar_employee_reviewers as
+select employee_number,
+       max(employee_name)       as employee_name,
+       max(user_name)           as oracle_user,
+       count(*)                 as responsibilities,
+       max(reviewer_id)         as reviewer_id,
+       max(reviewer_name)       as reviewer_name,
+       max(reviewer_email)      as reviewer_email,
+       nvl(max(reviewer_source), 'NONE') as reviewer_source,
+       max(workday_manager_id)  as workday_manager_id,
+       max(workday_manager)     as workday_manager
+  from (select er.employee_number,
+               er.user_name,
+               nvl(trim(e.employee_legal_first_name || ' ' || e.employee_legal_last_name), '(not in Workday data)') as employee_name,
+               e.manager_id        as reviewer_id,
+               trim(e.manager_first_name || ' ' || e.manager_last_name) as reviewer_name,
+               e.manager_email     as reviewer_email,
+               e.manager_source    as reviewer_source,
+               e.workday_manager_id,
+               wm.name             as workday_manager
+          from xxcti_uar_employee_responsibilities er
+          left join xxcti_uar_effective_mgr e
+            on to_char(e.employee_id) = er.employee_number
+          left join (select employee_id,
+                            min(employee_legal_first_name || ' ' || employee_legal_last_name) as name
+                       from xxcti_uar_workday_norm
+                      group by employee_id) wm
+            on wm.employee_id = e.workday_manager_id)
  group by employee_number;
 
 -- ----------------------------------------------------------------------------

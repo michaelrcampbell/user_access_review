@@ -1502,3 +1502,25 @@ application variant). Deployment packs are in `deploy/`. Things learned on the w
 must be entered (AADSTS900144 otherwise); a dropdown's floating label strip must be contained by narrowing the whole
 field. `README.md` was rewritten to describe the live system (it still described a Stage 0 build).
 
+## Move employees between managers — 2026-11-17 (branch `feature/move-employees`)
+
+Reviewer Assignments (Page 5) could only give a reviewer to employees Workday has no usable manager for. Admins can now also
+**move an employee from one manager's team to another's**, overriding a valid Workday manager.
+
+- An assignment now **wins over Workday** until removed (`xxcti_uar_effective_mgr`: assignment first, then Workday). Removing
+  it returns the employee to their Workday manager. Before, an assignment was ignored whenever Workday had a manager.
+- `assign_reviewer` rules: a move away from a Workday manager **requires a reason**; the new reviewer must not report to the
+  employee (unchanged), must not be someone the employee already reviews by assignment (no two people reviewing each other),
+  must not already be the reviewer, and cannot be the Workday manager (remove the assignment instead). Logged as
+  `MOVE_REVIEWER` with the old reviewer, the new one and the Workday manager. The old rule error `-20062` is retired; new
+  errors `-20067` to `-20070`.
+- Page 5: a searchable list of every employee with who reviews them now, where that comes from and their Workday manager
+  (click an employee number to select), a "Choose the New Reviewer" form, and Current Assignments now shows the Workday
+  manager each move overrides. The success message says how many of the employee's items are in the open cycle, how many
+  are already decided (kept as recorded; the new reviewer can change them), and warns if the new reviewer has already
+  submitted (reopen their submission from Review Cycles). New view `xxcti_uar_employee_reviewers`.
+- Effects are immediate and follow the existing views: the old manager's team, progress and Submit eligibility shrink, the
+  new manager's grow; the old manager can no longer open the employee.
+- Regression suite is now 104 checks (the two tests that encoded the old rule were replaced, a "move" section was added, and
+  a test that depended on row order now targets a specific employee).
+
