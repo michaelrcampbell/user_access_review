@@ -4,6 +4,7 @@
     python deploy/make_pack.py <pack-folder> <from-ref>     upgrade pack
     python deploy/make_pack.py <pack-folder> FRESH          first-install pack
     add --prod to either for the production application variant (no developer edit link, feedback off)
+    add --with-prod-app (upgrade packs) to ship BOTH app variants: 04_uar_apex.sql for DEV/TEST and 04_uar_apex_PROD.sql
 
     pack-folder  e.g. deploy/dev-2026-10-21 (hand-written README/checklist/preflight/verify live there already)
     from-ref     the git ref that is currently live in the target environment (used for the rollback files),
@@ -30,6 +31,7 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROD = "--prod" in sys.argv
+WITH_PROD_APP = "--with-prod-app" in sys.argv
 _args = [a for a in sys.argv[1:] if not a.startswith("--")]
 pack = os.path.abspath(_args[0])
 from_ref = _args[1]
@@ -52,16 +54,22 @@ def write(rel, text):
         f.write(text.replace("\n", "\r\n") if rel.endswith((".sql", ".md", ".txt")) else text)
 
 
-def app_text():
-    """The application export. With --prod, two production settings are switched (everything else is identical
-    to what DEV and TEST run): the developer 'edit' link is hidden and the end-user feedback feature is off."""
-    text = read("04_uar_apex.sql")
-    if PROD:
-        for old, new in ((",p_flow_status=>'AVAILABLE_W_EDIT_LINK'", ",p_flow_status=>'AVAILABLE'"),
-                         (",p_allow_feedback_yn=>'Y'", ",p_allow_feedback_yn=>'N'")):
-            assert text.count(old) == 1, f"{old} expected exactly once"
-            text = text.replace(old, new)
+PROD_SWAPS = ((",p_flow_status=>'AVAILABLE_W_EDIT_LINK'", ",p_flow_status=>'AVAILABLE'"),
+              (",p_allow_feedback_yn=>'Y'", ",p_allow_feedback_yn=>'N'"))
+
+
+def prodify(text):
+    for old, new in PROD_SWAPS:
+        assert text.count(old) == 1, f"{old} expected exactly once"
+        text = text.replace(old, new)
     return text
+
+
+def app_text(prod=None):
+    """The application export. The production variant switches two settings (everything else is identical to
+    what DEV and TEST run): the developer 'edit' link is hidden and the end-user feedback feature is off."""
+    text = read("04_uar_apex.sql")
+    return prodify(text) if (PROD if prod is None else prod) else text
 
 
 head = git("rev-parse", "--short", "HEAD").strip()
@@ -151,57 +159,83 @@ else:
     comments = re.findall(r"comment on (?:table|column) [\w.]+ is\s*\n\s*'(?:[^']|'')*';",
                           read("01_uar_schema_ddl.sql"), re.I)
     assert len(comments) == 5, len(comments)
-    patch = (BAR + f"-- UAR release -> DEV : SCHEMA PATCH (built from commit {head})\n--\n"
+    patch = (BAR + f"-- UAR release -> DEV/TEST/PROD : SCHEMA PATCH (built from commit {head})\n--\n"
              "-- Run as XXUAR (SQL Workshop > SQL Scripts, or SQLcl). Safe to run more than once.\n"
-             "--   PART A  new tables, views, indexes and constraints (01b_uar_release_hardening.sql)\n"
+             "--   PART A  tables, views, indexes and constraints (01b_uar_release_hardening.sql)\n"
              "--   PART B  table comments that the original install never managed to create\n"
              "--   PART C  packages, triggers, error handler (02_uar_packages.sql)\n"
-             "-- Part A stops with a plain message if existing cycle data would break a new rule;\n"
+             "-- Part A stops with a plain message if existing cycle data would break a rule;\n"
              "-- run 01_preflight_checks.sql first so you already know.\n" + BAR + "\n"
              + BAR + "-- PART A\n" + BAR + read("01b_uar_release_hardening.sql") + "\n"
              + BAR + "-- PART B\n" + BAR + "\n".join(comments) + "\n\n"
              + BAR + "-- PART C\n" + BAR + read("02_uar_packages.sql"))
     write("02_schema_patch.sql", patch)
     write("03_app/04_uar_apex.sql", app_text())
+    if WITH_PROD_APP:
+        write("03_app/04_uar_apex_PROD.sql", app_text(prod=True))
 
-    old02 = git("show", f"{from_ref}:02_uar_packages.sql").replace("\r\n", "\n")
-    old01 = git("show", f"{from_ref}:01_uar_schema_ddl.sql").replace("\r\n", "\n")
-    old04 = git("show", f"{from_ref}:04_uar_apex.sql").replace("\r\n", "\n")
-    m = re.search(r"create or replace view xxcti_uar_cycle_progress as.*?;\n", old01, re.S)
-    assert m, "old progress view not found"
+    def old_file(name):
+        try:
+            return git("show", f"{from_ref}:{name}").replace("\r\n", "\n")
+        except subprocess.CalledProcessError:
+            return None
+
+    old02 = old_file("02_uar_packages.sql")
+    old04 = old_file("04_uar_apex.sql")
+    old01b = old_file("01b_uar_release_hardening.sql")
+    if old01b:
+        # the previous release already had 01b: its views live there, so restore the old effective-reviewer view
+        m = re.search(r"create or replace view xxcti_uar_effective_mgr as.*?;\n", old01b, re.S)
+        assert m, "old effective view not found"
+        old_view_label = "effective-reviewer view"
+    else:
+        m = re.search(r"create or replace view xxcti_uar_cycle_progress as.*?;\n", old_file("01_uar_schema_ddl.sql"), re.S)
+        assert m, "old progress view not found"
+        old_view_label = "progress view"
     write("rollback/R1_restore_previous_packages.sql",
-          BAR + "-- ROLLBACK 1 of 3: restore the PREVIOUS release's packages, triggers and progress view\n"
-          f"-- (as of {from_ref}). Run as XXUAR. The new tables/views stay in place (harmless) -- see R3.\n"
+          BAR + f"-- ROLLBACK 1 of 3: restore the PREVIOUS release's packages, triggers and {old_view_label}\n"
+          f"-- (as of {from_ref}). Run as XXUAR. Anything the new release added to the schema stays (harmless) -- see R3.\n"
           "-- Re-import the previous application too (R2), or the new app will call packages that no longer exist.\n"
-          + BAR + "\n-- previous progress view\n" + m.group(0) + "\n" + old02)
-    write("rollback/R2_previous_app_04_uar_apex.sql",
-          "-- ROLLBACK 2 of 3: previous release's application export (as of " + from_ref + ").\n"
-          "-- Import exactly like the new one. If you took the Step 0 backup export of DEV, prefer that file.\n" + old04)
+          + BAR + f"\n-- previous {old_view_label}\n" + m.group(0) + "\n" + old02)
+    rb_note = ("-- Import exactly like the new one. If you took the Step 0 backup export, prefer that file.\n")
+    if WITH_PROD_APP:
+        write("rollback/R2_previous_app_04_uar_apex.sql",
+              f"-- ROLLBACK 2 of 3: previous release's application export (as of {from_ref}), STANDARD variant (DEV/TEST).\n" + rb_note + old04)
+        write("rollback/R2_previous_app_04_uar_apex_PROD.sql",
+              f"-- ROLLBACK 2 of 3: previous release's application export (as of {from_ref}), PRODUCTION variant (use in PROD).\n"
+              + rb_note + prodify(old04))
+    else:
+        write("rollback/R2_previous_app_04_uar_apex.sql",
+              f"-- ROLLBACK 2 of 3: previous release's application export (as of {from_ref}).\n" + rb_note + old04)
+    if old01b:
+        drops = ["drop view xxcti_uar_employee_reviewers"]
+        why = "what this patch added (the previous release's objects stay)"
+    else:
+        drops = ["drop view xxcti_uar_employee_reviewers",
+                 "drop view xxcti_uar_unassigned_employees",
+                 "drop view xxcti_uar_unassigned_items",
+                 "drop view xxcti_uar_data_issues",
+                 "drop view xxcti_uar_effective_mgr",
+                 "drop view xxcti_uar_workday_norm",
+                 "drop function xxcti_uar_error_handler",
+                 "drop index xxcti_uar_cycles_one_open_ux",
+                 "drop index xxcti_uar_cycles_name_ux",
+                 "alter table xxcti_uar_review_cycles drop constraint xxcti_uar_review_cycles_dates_ck",
+                 "drop table xxcti_uar_reviewer_overrides purge",
+                 "drop table xxcti_uar_admin_log purge",
+                 "drop sequence xxcti_uar_admin_log_seq"]
+        why = "what this release added to the schema"
     write("rollback/R3_optional_remove_new_objects.sql",
-          BAR + "-- ROLLBACK 3 of 3 (OPTIONAL): remove what this release added to the schema.\n"
-          "-- Only after R1 and R2. WARNING: xxcti_uar_admin_log and xxcti_uar_reviewer_overrides hold real\n"
-          "-- history (admin actions, reviewer assignments) that is lost when dropped. Normally leave them.\n"
+          BAR + f"-- ROLLBACK 3 of 3 (OPTIONAL): remove {why}.\n"
+          "-- Only after R1 and R2. Dropping tables loses their history (admin log, reviewer assignments); normally leave them.\n"
           + BAR + "\n"
-          + "".join(
-              "begin execute immediate '%s'; exception when others then if sqlcode not in (-942, -1418, -4043, -2443, -1434) then raise; end if; end;\n/\n" % stmt
-              for stmt in [
-                  "drop view xxcti_uar_unassigned_employees",
-                  "drop view xxcti_uar_unassigned_items",
-                  "drop view xxcti_uar_data_issues",
-                  "drop view xxcti_uar_effective_mgr",
-                  "drop view xxcti_uar_workday_norm",
-                  "drop function xxcti_uar_error_handler",
-                  "drop index xxcti_uar_cycles_one_open_ux",
-                  "drop index xxcti_uar_cycles_name_ux",
-                  "alter table xxcti_uar_review_cycles drop constraint xxcti_uar_review_cycles_dates_ck",
-                  "drop table xxcti_uar_reviewer_overrides purge",
-                  "drop table xxcti_uar_admin_log purge",
-                  "drop sequence xxcti_uar_admin_log_seq",
-              ]))
+          + "".join("begin execute immediate '%s'; exception when others then if sqlcode not in (-942, -1418, -4043, -2443, -1434) then raise; end if; end;\n/\n" % d
+                    for d in drops))
 
 # ----------------------------------------------------------------------------- manifest
 lines = ["UAR deployment pack", f"built from commit : {head} ({git('log', '-1', '--format=%s').strip()})",
-         "application file  : " + ("PRODUCTION variant (availability AVAILABLE, feedback off); otherwise identical to DEV/TEST" if PROD else "standard (as DEV/TEST)"),
+         "application file  : " + ("both: 04_uar_apex.sql (DEV/TEST) and 04_uar_apex_PROD.sql (PROD: availability AVAILABLE, feedback off)" if WITH_PROD_APP
+                          else "PRODUCTION variant (availability AVAILABLE, feedback off); otherwise identical to DEV/TEST" if PROD else "standard (as DEV/TEST)"),
          "previous release  : " + ("none - FIRST INSTALL" if FRESH else
                                    f"{from_ref} ({git('log', '-1', '--format=%s', from_ref).strip()})"), "",
          "SHA-256                                                           file"]
